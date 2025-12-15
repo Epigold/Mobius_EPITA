@@ -129,7 +129,7 @@ class Player(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.center = (screen_width // 2, screen_height // 2)
         
-        self.hitbox = pygame.Rect(0, 0, TAILLE_PERSO * 0.6, TAILLE_PERSO * 0.6)
+        self.hitbox = pygame.Rect(0, 0, TAILLE_PERSO * 0.4, TAILLE_PERSO * 0.4)
         self.hitbox.center = self.rect.center
         
         self.speed = 7
@@ -398,7 +398,7 @@ class Player(pygame.sprite.Sprite):
                 "berserker": "Berserker", 
                 "vampire": "Vampire",
                 "ninja": "Ninja",
-                "mage": "Marge"
+                "mage": "Mage"
             }
             skill_text = font.render(f"Classe: {skill_names.get(self.skill, 'Aucune')}", True, CYAN)
             surface.blit(skill_text, (10, 105))
@@ -824,7 +824,7 @@ SKILLS = {
         "color": BLACK
     },
     "mage": {
-        "name": "Marge",
+        "name": "Mage",
         "desc": "150 Stamina, +50% regen",
         "special": "Nova de projectiles",
         "color": CYAN
@@ -836,7 +836,7 @@ def draw_menu():
     screen.blit(background_image, (0, 0))
     
     # Titre
-    title_text = font_large.render("MOBIUS ROGUELIKE", True, GOLD)
+    title_text = font_large.render("MOBIUS ROGUELIKE", True, WHITE)
     title_rect = title_text.get_rect(center=(screen_width // 2, 100))
     screen.blit(title_text, title_rect)
     
