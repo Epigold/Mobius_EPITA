@@ -223,8 +223,16 @@ class Player(pygame.sprite.Sprite):
             self.image = pygame.transform.flip(self.original_image, True, False)
 
         if not self.dashing:
-            dx = (keys[pygame.K_d] - keys[pygame.K_q])
-            dy = (keys[pygame.K_s] - keys[pygame.K_z])
+            dx = 0
+            dy = 0
+            if keys[pygame.K_d]:
+                dx += 1
+            if keys[pygame.K_q] or keys[pygame.K_a]:
+                dx -= 1
+            if keys[pygame.K_s]:
+                dy += 1
+            if keys[pygame.K_z] or keys[pygame.K_w]:
+                dy -= 1
             if dx or dy:
                 norm = math.hypot(dx, dy)
                 dx, dy = dx / norm, dy / norm
@@ -1013,7 +1021,7 @@ while running:
                     player.change_weapon("caillou")
                 elif event.key == pygame.K_2 and "os" in player.inventory:
                     player.change_weapon("os")
-                elif event.key == pygame.K_a:
+                elif event.key == pygame.K_f:
                     player.use_skill()
                 elif event.key == pygame.K_e:
                     for chest in chests:
