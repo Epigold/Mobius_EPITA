@@ -14,7 +14,8 @@ __pycache__/
 *.pptx
 *.ppt
 *.odt
-Presentation/insta/
+Presentation/
+doccument_avancement/
 
 # Distribution / packaging
 .Python
@@ -75,6 +76,9 @@ instance/
 
 # Sphinx documentation
 docs/_build/
+
+# After setup.sh
+run.sh
 
 # PyBuilder
 target/
