@@ -419,7 +419,7 @@ class Player(pygame.sprite.Sprite):
             if self.skill_cooldown > 0:
                 cd_text = font.render(f"Compétence: {self.skill_cooldown // 60}s", True, RED)
             else:
-                cd_text = font.render("Compétence: Prête (A)", True, GREEN)
+                cd_text = font.render("Compétence: Prête (F)", True, GREEN)
             surface.blit(cd_text, (10, 130))
         
         # Power-ups actifs
@@ -1116,7 +1116,7 @@ while running:
         
         # Indicateurs
         if len(player.inventory) > 1:
-            weapon_hint = font_small.render("1/2: Changer d'arme | A: Compétence", True, WHITE)
+            weapon_hint = font_small.render("1/2: Changer d'arme | F: Compétence", True, WHITE)
             screen.blit(weapon_hint, (10, 180))
         
         # Affichage de la vague
@@ -1129,14 +1129,6 @@ while running:
             wave_rect.topright = (screen_width - 20, 10)
             screen.blit(wave_text, wave_rect)
         else:
-            complete_text = font_large.render("VAGUE TERMINÉE !", True, GREEN)
-            complete_rect = complete_text.get_rect(center=(screen_width // 2, 100))
-            screen.blit(complete_text, complete_rect)
-            
-            next_text = font_medium.render("Préparez-vous pour la prochaine vague...", True, WHITE)
-            next_rect = next_text.get_rect(center=(screen_width // 2, 150))
-            screen.blit(next_text, next_rect)
-            
             # Timer pour la prochaine vague
             if spawn_timer >= 180:  # 3 secondes
                 start_new_wave()
