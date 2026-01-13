@@ -62,28 +62,6 @@ fi
 echo "Python 3 installé avec succès."
 python3 --version
 
-# Installer pip si pas présent
-if ! command -v pip3 >/dev/null 2>&1; then
-    echo "Installation de pip..."
-    curl -sS https://bootstrap.pypa.io/get-pip.py | python3
-fi
-
-echo "Mise à jour de pip..."
-pip3 install --upgrade pip
-
-# Installer Pygame
-echo "Installation de Pygame..."
-pip3 install pygame
-
-# Vérifier l'installation
-if python3 -c "import pygame; print('Pygame version:', pygame.version.ver)" >/dev/null 2>&1; then
-    echo "Pygame installé avec succès."
-    python3 -c "import pygame; print('Pygame version:', pygame.version.ver)"
-else
-    echo "Erreur lors de l'installation de Pygame."
-    exit 1
-fi
-
 # Créer un environnement virtuel
 echo "Création d'un environnement virtuel..."
 python3 -m venv venv
