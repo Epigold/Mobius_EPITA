@@ -361,6 +361,10 @@ class Player(pygame.sprite.Sprite):
         # Chance de drop de pièce
         if random.random() < 0.3:
             self.coins += 1
+        
+        # Récupération de PV pour le vampire si compétence active
+        if self.skill == "vampire" and self.skill_active:
+            self.health = min(self.health + 10, self.max_health)
 
     def draw_health_bar(self, surface):
         bar_width = 200
