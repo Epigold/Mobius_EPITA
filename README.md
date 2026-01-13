@@ -45,8 +45,22 @@ Mobius est un jeu roguelike en 2D où le joueur incarne un héros combattant des
 ## 🚀 Installation
 
 ### Prérequis
-- Python 3.x
-- Pygame
+**🐧 Linux**
+**Debian / Ubuntu / Linux Mint**
+```bash
+sudo apt update
+sudo apt install git
+```
+**🪟 Windows**
+```bash
+winget install --id Git.Git -e --source winget
+```
+*⚠️ Après installation, ouvre un nouveau terminal (PowerShell, CMD ou Git Bash).*
+
+**Ensuite:**
+```bash
+git clone https://github.com/Epigold/Mobius_EPITA.git
+```
 
 ### Installation des dépendances
 ```bash
