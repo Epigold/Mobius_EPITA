@@ -10,12 +10,28 @@ from epoques.medieval import MedievalEpoque
 from epoques.modern import ModernEpoque
 from epoques.futuristic import FuturisticEpoque
 from core.player import Player
-from core.constants import *
+import core.constants as constants
+
+# Initialiser pygame pour accéder aux infos d'écran
+pygame.init()
+monitor_info = pygame.display.Info()
+
+# Adapter les constantes d'écran à la résolution actuelle (optionnel)
+# Décommentez les lignes suivantes si vous voulez une résolution adaptative
+# constants.SCREEN_WIDTH = monitor_info.current_w
+# constants.SCREEN_HEIGHT = monitor_info.current_h
+# constants.SCALE_FACTOR = min(constants.SCREEN_WIDTH / constants.REFERENCE_WIDTH, 
+#                               constants.SCREEN_HEIGHT / constants.REFERENCE_HEIGHT)
+
+# Fonction utilitaire pour les tailles de police scalables
+def scale_font_size(size):
+    """Adapte la taille d'une police à la résolution"""
+    return int(size * constants.SCALE_FACTOR)
 
 class Game:
     def __init__(self):
         pygame.init()
-        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+        self.screen = pygame.display.set_mode((constants.SCREEN_WIDTH, constants.SCREEN_HEIGHT))
         pygame.display.set_caption("Mobius - Journey Through Time")
         self.clock = pygame.time.Clock()
         self.running = True
@@ -34,8 +50,8 @@ class Game:
         selecting = True
         selected_class = None
         
-        font_title = pygame.font.Font(None, 74)
-        font_text = pygame.font.Font(None, 36)
+        font_title = pygame.font.Font(None, scale_font_size(74))
+        font_text = pygame.font.Font(None, scale_font_size(36))
         
         classes = {
             '1': 'Tank',
@@ -46,20 +62,20 @@ class Game:
         }
         
         while selecting:
-            self.screen.fill(BLACK)
+            self.screen.fill(constants.BLACK)
             
             # Titre
-            title = font_title.render("MOBIUS", True, GOLD)
-            self.screen.blit(title, (SCREEN_WIDTH//2 - title.get_width()//2, 50))
+            title = font_title.render("MOBIUS", True, constants.GOLD)
+            self.screen.blit(title, (constants.SCREEN_WIDTH//2 - title.get_width()//2, 50))
             
-            subtitle = font_text.render("Choisissez votre classe", True, WHITE)
-            self.screen.blit(subtitle, (SCREEN_WIDTH//2 - subtitle.get_width()//2, 150))
+            subtitle = font_text.render("Choisissez votre classe", True, constants.WHITE)
+            self.screen.blit(subtitle, (constants.SCREEN_WIDTH//2 - subtitle.get_width()//2, 150))
             
             # Affichage des classes
             y = 250
             for key, class_name in classes.items():
-                text = font_text.render(f"{key}. {class_name}", True, WHITE)
-                self.screen.blit(text, (SCREEN_WIDTH//2 - text.get_width()//2, y))
+                text = font_text.render(f"{key}. {class_name}", True, constants.WHITE)
+                self.screen.blit(text, (constants.SCREEN_WIDTH//2 - text.get_width()//2, y))
                 y += 60
             
             pygame.display.flip()
@@ -77,18 +93,18 @@ class Game:
     
     def transition_screen(self, epoque_name):
         """Ecran de transition entre epoques"""
-        font = pygame.font.Font(None, 74)
+        font = pygame.font.Font(None, scale_font_size(74))
         transition_time = 3000
         start_time = pygame.time.get_ticks()
         
         while pygame.time.get_ticks() - start_time < transition_time:
-            self.screen.fill(BLACK)
+            self.screen.fill(constants.BLACK)
             
-            text = font.render(f"Epoque: {epoque_name}", True, GOLD)
-            self.screen.blit(text, (SCREEN_WIDTH//2 - text.get_width()//2, SCREEN_HEIGHT//2))
+            text = font.render(f"Epoque: {epoque_name}", True, constants.GOLD)
+            self.screen.blit(text, (constants.SCREEN_WIDTH//2 - text.get_width()//2, constants.SCREEN_HEIGHT//2))
             
             pygame.display.flip()
-            self.clock.tick(FPS)
+            self.clock.tick(constants.FPS)
             
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -122,23 +138,23 @@ class Game:
             
     def game_over_screen(self):
         """Écran de fin de partie"""
-        font_title = pygame.font.Font(None, 74)
-        font_text = pygame.font.Font(None, 36)
+        font_title = pygame.font.Font(None, scale_font_size(74))
+        font_text = pygame.font.Font(None, scale_font_size(36))
         
         waiting = True
         while waiting:
-            self.screen.fill(BLACK)
+            self.screen.fill(constants.BLACK)
             
-            title = font_title.render("GAME OVER", True, RED)
-            self.screen.blit(title, (SCREEN_WIDTH//2 - title.get_width()//2, 200))
+            title = font_title.render("GAME OVER", True, constants.RED)
+            self.screen.blit(title, (constants.SCREEN_WIDTH//2 - title.get_width()//2, 200))
             
-            restart = font_text.render("R - Recommencer", True, WHITE)
-            menu = font_text.render("M - Menu", True, WHITE)
-            quit_text = font_text.render("ESC - Quitter", True, WHITE)
+            restart = font_text.render("R - Recommencer", True, constants.WHITE)
+            menu = font_text.render("M - Menu", True, constants.WHITE)
+            quit_text = font_text.render("ESC - Quitter", True, constants.WHITE)
             
-            self.screen.blit(restart, (SCREEN_WIDTH//2 - restart.get_width()//2, 350))
-            self.screen.blit(menu, (SCREEN_WIDTH//2 - menu.get_width()//2, 400))
-            self.screen.blit(quit_text, (SCREEN_WIDTH//2 - quit_text.get_width()//2, 450))
+            self.screen.blit(restart, (constants.SCREEN_WIDTH//2 - restart.get_width()//2, 350))
+            self.screen.blit(menu, (constants.SCREEN_WIDTH//2 - menu.get_width()//2, 400))
+            self.screen.blit(quit_text, (constants.SCREEN_WIDTH//2 - quit_text.get_width()//2, 450))
             
             pygame.display.flip()
             
@@ -159,24 +175,24 @@ class Game:
                         
     def victory_screen(self):
         """Écran de victoire"""
-        font_title = pygame.font.Font(None, 74)
-        font_text = pygame.font.Font(None, 36)
+        font_title = pygame.font.Font(None, scale_font_size(74))
+        font_text = pygame.font.Font(None, scale_font_size(36))
         
         waiting = True
         while waiting:
-            self.screen.fill(BLACK)
+            self.screen.fill(constants.BLACK)
             
-            title = font_title.render("VICTOIRE!", True, GOLD)
-            self.screen.blit(title, (SCREEN_WIDTH//2 - title.get_width()//2, 200))
+            title = font_title.render("VICTOIRE!", True, constants.GOLD)
+            self.screen.blit(title, (constants.SCREEN_WIDTH//2 - title.get_width()//2, 200))
             
-            subtitle = font_text.render("Vous avez traverse toutes les epoques!", True, WHITE)
-            self.screen.blit(subtitle, (SCREEN_WIDTH//2 - subtitle.get_width()//2, 300))
+            subtitle = font_text.render("Vous avez traverse toutes les epoques!", True, constants.WHITE)
+            self.screen.blit(subtitle, (constants.SCREEN_WIDTH//2 - subtitle.get_width()//2, 300))
             
-            menu = font_text.render("M - Menu", True, WHITE)
-            quit_text = font_text.render("ESC - Quitter", True, WHITE)
+            menu = font_text.render("M - Menu", True, constants.WHITE)
+            quit_text = font_text.render("ESC - Quitter", True, constants.WHITE)
             
-            self.screen.blit(menu, (SCREEN_WIDTH//2 - menu.get_width()//2, 400))
-            self.screen.blit(quit_text, (SCREEN_WIDTH//2 - quit_text.get_width()//2, 450))
+            self.screen.blit(menu, (constants.SCREEN_WIDTH//2 - menu.get_width()//2, 400))
+            self.screen.blit(quit_text, (constants.SCREEN_WIDTH//2 - quit_text.get_width()//2, 450))
             
             pygame.display.flip()
             
@@ -194,24 +210,24 @@ class Game:
     
     def main_menu(self):
         """Menu principal"""
-        font_title = pygame.font.Font(None, 74)
-        font_text = pygame.font.Font(None, 36)
+        font_title = pygame.font.Font(None, scale_font_size(74))
+        font_text = pygame.font.Font(None, scale_font_size(36))
         
         in_menu = True
         while in_menu:
-            self.screen.fill(BLACK)
+            self.screen.fill(constants.BLACK)
             
-            title = font_title.render("MOBIUS", True, GOLD)
-            subtitle = font_text.render("Journey Through Time", True, WHITE)
+            title = font_title.render("MOBIUS", True, constants.GOLD)
+            subtitle = font_text.render("Journey Through Time", True, constants.WHITE)
             
-            self.screen.blit(title, (SCREEN_WIDTH//2 - title.get_width()//2, 150))
-            self.screen.blit(subtitle, (SCREEN_WIDTH//2 - subtitle.get_width()//2, 230))
+            self.screen.blit(title, (constants.SCREEN_WIDTH//2 - title.get_width()//2, 150))
+            self.screen.blit(subtitle, (constants.SCREEN_WIDTH//2 - subtitle.get_width()//2, 230))
             
-            start = font_text.render("Appuyez sur ESPACE pour commencer", True, WHITE)
-            quit_text = font_text.render("ESC pour quitter", True, WHITE)
+            start = font_text.render("Appuyez sur ESPACE pour commencer", True, constants.WHITE)
+            quit_text = font_text.render("ESC pour quitter", True, constants.WHITE)
             
-            self.screen.blit(start, (SCREEN_WIDTH//2 - start.get_width()//2, 350))
-            self.screen.blit(quit_text, (SCREEN_WIDTH//2 - quit_text.get_width()//2, 400))
+            self.screen.blit(start, (constants.SCREEN_WIDTH//2 - start.get_width()//2, 350))
+            self.screen.blit(quit_text, (constants.SCREEN_WIDTH//2 - quit_text.get_width()//2, 400))
             
             pygame.display.flip()
             
@@ -251,7 +267,7 @@ class Game:
                 self.current_epoque.draw(self.screen)
             
             pygame.display.flip()
-            self.clock.tick(FPS)
+            self.clock.tick(constants.FPS)
         
         pygame.quit()
 

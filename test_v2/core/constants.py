@@ -2,10 +2,20 @@
 Constantes globales du jeu Mobius
 """
 
+import pygame
+
 # Paramètres d'écran
 SCREEN_WIDTH = 1280
 SCREEN_HEIGHT = 720
 FPS = 60
+
+# Résolution de référence (pour le scaling des assets)
+REFERENCE_WIDTH = 1280
+REFERENCE_HEIGHT = 720
+
+# Calcul du facteur d'échelle basé sur la résolution
+# Ce facteur sera utilisé pour adapter tous les assets à la taille de l'écran
+SCALE_FACTOR = min(SCREEN_WIDTH / REFERENCE_WIDTH, SCREEN_HEIGHT / REFERENCE_HEIGHT)
 
 # Couleurs
 BLACK = (0, 0, 0)
@@ -19,8 +29,13 @@ PURPLE = (128, 0, 128)
 DARK_RED = (139, 0, 0)
 ORANGE = (255, 165, 0)
 
+# Fonction utilitaire pour adapter les tailles aux résolutions
+def scale_size(size):
+    """Adapte une taille en fonction de la résolution de l'écran"""
+    return int(size * SCALE_FACTOR)
+
 # Paramètres du joueur
-PLAYER_SIZE = 40
+PLAYER_SIZE = scale_size(40)
 PLAYER_BASE_SPEED = 5
 PLAYER_BASE_HEALTH = 100
 PLAYER_BASE_STAMINA = 100
@@ -32,18 +47,18 @@ DASH_SPEED = 15
 # Paramètres des projectiles
 PROJECTILE_SPEED = 10
 PROJECTILE_DAMAGE = 10
-PROJECTILE_SIZE = 8
+PROJECTILE_SIZE = scale_size(8)
 
 # Paramètres des ennemis
-ENEMY_SIZE = 35
+ENEMY_SIZE = scale_size(35)
 ENEMY_BASE_SPEED = 2
 ENEMY_BASE_HEALTH = 50
 ENEMY_DAMAGE = 10
-ENEMY_ATTACK_RANGE = 50
+ENEMY_ATTACK_RANGE = scale_size(50)
 
 # Paramètres de spawn
-SPAWN_MARGIN = 100
-MIN_SPAWN_DISTANCE = 150
+SPAWN_MARGIN = scale_size(100)
+MIN_SPAWN_DISTANCE = scale_size(150)
 
 # Paramètres des vagues
 WAVES_PER_EPOQUE = 5
@@ -52,13 +67,13 @@ ENEMY_INCREASE_PER_WAVE = 2
 HEALTH_INCREASE_PER_WAVE = 10
 
 # Paramètres des power-ups
-POWERUP_SIZE = 30
+POWERUP_SIZE = scale_size(30)
 POWERUP_DURATION = 5000  # millisecondes
 POWERUP_SPAWN_CHANCE = 0.15
 
 # Paramètres des coffres
-CHEST_SIZE = 40
-CHEST_INTERACTION_RANGE = 60
+CHEST_SIZE = scale_size(40)
+CHEST_INTERACTION_RANGE = scale_size(60)
 
 # Paramètres des armes
 WEAPON_RANGE = 50  # pour armes de mêlée

@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
-# Jeu Roguelike Mobius
-# Améliorations : salles, vagues d'ennemis, système de progression, power-ups
+# Roguelike Mobius
 
 import pygame
 import random
 import math
+from pathlib import Path
+import os
 
 # Initialisation de Pygame
 pygame.init()
@@ -51,11 +52,22 @@ MENU = 0
 PLAYING = 1
 GAME_OVER = 2
 
+# Gestion des chemins portables (Linux et Windows)
+BASE_PATH = Path(__file__).parent
+ASSETS_PATH = BASE_PATH / "assets"
+CHARACTERS_PATH = ASSETS_PATH / "characteres"
+BACKGROUNDS_PATH = ASSETS_PATH / "backgrounds"
+WEAPONS_PATH = ASSETS_PATH / "weapons"
+
+def get_asset_path(*parts):
+    """Construit un chemin d'asset de manière portable"""
+    return str(BASE_PATH / "assets" / Path(*parts))
+
 # Chargement des images
-player_image = pygame.image.load("assets/characteres/chara_test.png").convert_alpha()
+player_image = pygame.image.load(get_asset_path("characteres", "chara_test.png")).convert_alpha()
 player_image = pygame.transform.scale(player_image, (TAILLE_PERSO, TAILLE_PERSO))
-enemy_image = pygame.image.load("assets/characteres/monstre_dj_1.png").convert_alpha()
-background_image = pygame.image.load("assets/backgrounds/decor_dj_1.jpg").convert()
+enemy_image = pygame.image.load(get_asset_path("characteres", "monstre_dj_1.png")).convert_alpha()
+background_image = pygame.image.load(get_asset_path("backgrounds", "decor_dj_1.jpg")).convert()
 background_image = pygame.transform.scale(background_image, (screen_width, screen_height))
 
 class Weapon:
@@ -63,7 +75,7 @@ class Weapon:
     WEAPONS_DATA = {
         "caillou": {
             "name": "Caillou",
-            "image_path": "assets/weapons/caillou_dj_1.png",
+            "image_path": ("weapons", "caillou_dj_1.png"),
             "type": "ranged",
             "damage": 40,
             "stamina_cost": 1,
@@ -73,7 +85,7 @@ class Weapon:
         },
         "os": {
             "name": "Os",
-            "image_path": "assets/weapons/os_dj_1.png",
+            "image_path": ("weapons", "os_dj_1.png"),
             "type": "melee",
             "damage": 80,
             "stamina_cost": 3,
@@ -95,7 +107,8 @@ class Weapon:
         self.size = data["size"]
         
         try:
-            self.image = pygame.image.load(data["image_path"]).convert_alpha()
+            image_path = get_asset_path(*data["image_path"])
+            self.image = pygame.image.load(image_path).convert_alpha()
             self.image = pygame.transform.scale(self.image, (self.size, self.size))
         except:
             self.image = pygame.Surface((self.size, self.size))
