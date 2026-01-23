@@ -1,0 +1,19 @@
+\contentsline {section}{Introduction}{3}{section*.2}%
+\contentsline {section}{\numberline {1}Piloter des projets collaboratifs}{3}{section.1}%
+\contentsline {subsection}{\numberline {1.1}Organiser son travail soi-même : définir ses objectifs, planifier leur atteinte et être fiable}{3}{subsection.1.1}%
+\contentsline {subsubsection}{\numberline {1.1.1}Spécifier le projet}{3}{subsubsection.1.1.1}%
+\contentsline {subsubsection}{\numberline {1.1.2}Planifier les étapes de la réalisation du projet}{4}{subsubsection.1.1.2}%
+\contentsline {subsection}{\numberline {1.2}Expliquer son travail en fonction du contexte : avancement et difficultés, de manière concise, précise et claire}{4}{subsection.1.2}%
+\contentsline {subsubsection}{\numberline {1.2.1}Présenter l'état d'avancement du projet}{4}{subsubsection.1.2.1}%
+\contentsline {subsubsection}{\numberline {1.2.2}Fournir une explication technique sur une tâche réalisée}{6}{subsubsection.1.2.2}%
+\contentsline {subsection}{\numberline {1.3}Identifier ses modalités de travail et ses modes de communication}{7}{subsection.1.3}%
+\contentsline {subsubsection}{\numberline {1.3.1}Expliquer les modalités de travail et le mode de communication utilisés}{7}{subsubsection.1.3.1}%
+\contentsline {subsubsection}{\numberline {1.3.2}Dynamique du groupe}{8}{subsubsection.1.3.2}%
+\contentsline {subsection}{\numberline {1.4}Se situer soi-même dans le groupe de travail projet (connaître sa place / son périmètre d'action)}{8}{subsection.1.4}%
+\contentsline {section}{\numberline {2}Produire une solution informatique efficace répondant à des contraintes de qualité, de sûreté et de sécurité}{11}{section.2}%
+\contentsline {subsection}{\numberline {2.1}Produire des programmes informatiques de premier accès, impliquant une interaction avec l'environnement, la gestion des dépendances et la livraison d'un exécutable}{11}{subsection.2.1}%
+\contentsline {subsubsection}{\numberline {2.1.1}Intégrer les outils de prise en main dans le produit}{11}{subsubsection.2.1.1}%
+\contentsline {subsubsection}{\numberline {2.1.2}Adopter le rendu visuel à l'objectif et au style du jeu}{12}{subsubsection.2.1.2}%
+\contentsline {subsubsection}{\numberline {2.1.3}Produire un exécutable de qualité}{13}{subsubsection.2.1.3}%
+\contentsline {subsubsection}{\numberline {2.1.4}Fournir une documentation technique de qualité}{14}{subsubsection.2.1.4}%
+\contentsline {section}{Conclusion}{14}{section*.3}%
