@@ -1,156 +1,310 @@
-"""
-Constantes globales du jeu Mobius
-"""
+# -*- coding: utf-8 -*-
+# constants.py - Constantes du jeu Mobius Roguelike
 
 import pygame
+from pathlib import Path
 
-# Paramètres d'écran
-SCREEN_WIDTH = 1280
-SCREEN_HEIGHT = 720
-FPS = 60
+# Initialisation de Pygame pour obtenir les infos d'écran
+pygame.init()
+info = pygame.display.Info()
+SCREEN_WIDTH, SCREEN_HEIGHT = info.current_w, info.current_h
 
-# Résolution de référence (pour le scaling des assets)
-REFERENCE_WIDTH = 1280
-REFERENCE_HEIGHT = 720
-
-# Calcul du facteur d'échelle basé sur la résolution
-# Ce facteur sera utilisé pour adapter tous les assets à la taille de l'écran
-SCALE_FACTOR = min(SCREEN_WIDTH / REFERENCE_WIDTH, SCREEN_HEIGHT / REFERENCE_HEIGHT)
-
-# Couleurs
-BLACK = (0, 0, 0)
+# ============= COULEURS =============
 WHITE = (255, 255, 255)
-RED = (255, 0, 0)
-GREEN = (0, 255, 0)
-BLUE = (0, 0, 255)
-YELLOW = (255, 255, 0)
-GOLD = (255, 215, 0)
-PURPLE = (128, 0, 128)
-DARK_RED = (139, 0, 0)
+RED = (200, 0, 0)
+GREEN = (0, 200, 0)
+DARK_RED = (100, 0, 0)
+BLACK = (0, 0, 0)
+BLUE = (50, 150, 255)
+DARK_BLUE = (30, 80, 150)
 ORANGE = (255, 165, 0)
+PURPLE = (150, 50, 200)
+YELLOW = (255, 255, 0)
+BROWN = (139, 69, 19)
+GOLD = (255, 215, 0)
+CYAN = (0, 255, 255)
+GRAY = (128, 128, 128)
+SILVER = (192, 192, 192)
+DARK_GREEN = (0, 100, 0)
 
-# Fonction utilitaire pour adapter les tailles aux résolutions
-def scale_size(size):
-    """Adapte une taille en fonction de la résolution de l'écran"""
-    return int(size * SCALE_FACTOR)
+# ============= TAILLES =============
+TAILLE_PERSO = 80
+TAILLE_ARME = 50
+TAILLE_TANK = 120
+TAILLE_RUSHER = 70
+TAILLE_SNIPER = 90
+TAILLE_BOSS = 200
 
-# Paramètres du joueur
-PLAYER_SIZE = scale_size(40)
-PLAYER_BASE_SPEED = 5
-PLAYER_BASE_HEALTH = 100
-PLAYER_BASE_STAMINA = 100
-STAMINA_REGEN = 1
-DASH_COST = 30
-DASH_COOLDOWN = 1000  # millisecondes
-DASH_SPEED = 15
+# ============= PARAMÈTRES JOUEUR =============
+DASH_SPEED = 20
+DASH_TIME = 10
+DASH_COOLDOWN = 30
+DASH_STAMINA_COST = 15
 
-# Paramètres des projectiles
-PROJECTILE_SPEED = 10
-PROJECTILE_DAMAGE = 10
-PROJECTILE_SIZE = scale_size(8)
+# ============= ÉTATS DU JEU =============
+MENU = 0
+PLAYING = 1
+GAME_OVER = 2
+ROOM_TRANSITION = 3
 
-# Paramètres des ennemis
-ENEMY_SIZE = scale_size(35)
-ENEMY_BASE_SPEED = 2
-ENEMY_BASE_HEALTH = 50
-ENEMY_DAMAGE = 10
-ENEMY_ATTACK_RANGE = scale_size(50)
+# ============= MODE DÉVELOPPEMENT =============
+PROTOTYPE_MODE = True
 
-# Paramètres de spawn
-SPAWN_MARGIN = scale_size(100)
-MIN_SPAWN_DISTANCE = scale_size(150)
+# ============= GESTION DES CHEMINS =============
+BASE_PATH = Path(__file__).parent
+ASSETS_PATH = BASE_PATH / "assets"
+CHARACTERS_PATH = ASSETS_PATH / "characteres"
+BACKGROUNDS_PATH = ASSETS_PATH / "backgrounds"
+WEAPONS_PATH = ASSETS_PATH / "weapons"
 
-# Paramètres des vagues
-WAVES_PER_EPOQUE = 5
-BOSS_WAVE = 3
-ENEMY_INCREASE_PER_WAVE = 2
-HEALTH_INCREASE_PER_WAVE = 10
+def get_asset_path(*parts):
+    """Construit un chemin d'asset de manière portable"""
+    return str(BASE_PATH / "assets" / Path(*parts))
 
-# Paramètres des power-ups
-POWERUP_SIZE = scale_size(30)
-POWERUP_DURATION = 5000  # millisecondes
-POWERUP_SPAWN_CHANCE = 0.15
-
-# Paramètres des coffres
-CHEST_SIZE = scale_size(40)
-CHEST_INTERACTION_RANGE = scale_size(60)
-
-# Paramètres des armes
-WEAPON_RANGE = 50  # pour armes de mêlée
-WEAPON_COOLDOWN = 500  # millisecondes
-
-# Stats des classes
-CLASS_STATS = {
-    'Tank': {
-        'health': 150,
-        'speed_modifier': 0.7,
-        'stamina': 100,
-        'special_cooldown': 10000
+# ============= DÉFINITION DES ARMES PAR ÉPOQUE =============
+WEAPONS_DATA = {
+    # PRÉHISTOIRE
+    "caillou": {
+        "name": "Caillou",
+        "epoch": "prehistoire",
+        "image_path": ("weapons", "caillou_dj_1.png"),
+        "type": "ranged",
+        "damage": 40,
+        "stamina_cost": 1,
+        "cooldown": 15,
+        "projectile_speed": 18,
+        "size": 50
     },
-    'Berserker': {
-        'health': 80,
-        'speed_modifier': 1.3,
-        'stamina': 100,
-        'special_cooldown': 8000
+    "os": {
+        "name": "Os",
+        "epoch": "prehistoire",
+        "image_path": ("weapons", "os_dj_1.png"),
+        "type": "melee",
+        "damage": 80,
+        "stamina_cost": 3,
+        "cooldown": 25,
+        "range": 120,
+        "size": 60
     },
-    'Vampire': {
-        'health': 100,
-        'speed_modifier': 1.0,
-        'stamina': 100,
-        'special_cooldown': 15000
+    
+    # GRÈCE ANTIQUE
+    "arc": {
+        "name": "Arc",
+        "epoch": "grece",
+        "image_path": ("weapons", "caillou_dj_1.png"),
+        "type": "ranged",
+        "damage": 60,
+        "stamina_cost": 2,
+        "cooldown": 20,
+        "projectile_speed": 25,
+        "size": 50
     },
-    'Ninja': {
-        'health': 100,
-        'speed_modifier': 1.15,
-        'stamina': 100,
-        'special_cooldown': 5000
+    "lance": {
+        "name": "Lance",
+        "epoch": "grece",
+        "image_path": ("weapons", "os_dj_1.png"),
+        "type": "melee",
+        "damage": 100,
+        "stamina_cost": 4,
+        "cooldown": 30,
+        "range": 150,
+        "size": 70
     },
-    'Mage': {
-        'health': 100,
-        'speed_modifier': 1.0,
-        'stamina': 150,
-        'special_cooldown': 12000
+    
+    # EDO
+    "katana": {
+        "name": "Katana",
+        "epoch": "edo",
+        "image_path": ("weapons", "os_dj_1.png"),
+        "type": "melee",
+        "damage": 120,
+        "stamina_cost": 3,
+        "cooldown": 20,
+        "range": 130,
+        "size": 65
+    },
+    "shuriken": {
+        "name": "Shuriken",
+        "epoch": "edo",
+        "image_path": ("weapons", "caillou_dj_1.png"),
+        "type": "ranged",
+        "damage": 50,
+        "stamina_cost": 1,
+        "cooldown": 10,
+        "projectile_speed": 30,
+        "size": 40
+    },
+    
+    # MODERNE
+    "carabine": {
+        "name": "Carabine à Baïonnette",
+        "epoch": "moderne",
+        "image_path": ("weapons", "os_dj_1.png"),
+        "type": "melee",
+        "damage": 140,
+        "stamina_cost": 5,
+        "cooldown": 35,
+        "range": 140,
+        "size": 80
+    },
+    "pistolet": {
+        "name": "Pistolet",
+        "epoch": "moderne",
+        "image_path": ("weapons", "caillou_dj_1.png"),
+        "type": "ranged",
+        "damage": 80,
+        "stamina_cost": 2,
+        "cooldown": 18,
+        "projectile_speed": 35,
+        "size": 45
+    },
+    
+    # CONTEMPORAIN
+    "ak47": {
+        "name": "AK-47",
+        "epoch": "contemporain",
+        "image_path": ("weapons", "caillou_dj_1.png"),
+        "type": "ranged",
+        "damage": 100,
+        "stamina_cost": 3,
+        "cooldown": 12,
+        "projectile_speed": 40,
+        "size": 55
+    },
+    "baionnette": {
+        "name": "Baïonnette",
+        "epoch": "contemporain",
+        "image_path": ("weapons", "os_dj_1.png"),
+        "type": "melee",
+        "damage": 110,
+        "stamina_cost": 3,
+        "cooldown": 22,
+        "range": 125,
+        "size": 60
+    },
+    
+    # FUTURISTIQUE
+    "laser": {
+        "name": "Laser",
+        "epoch": "futuristique",
+        "image_path": ("weapons", "caillou_dj_1.png"),
+        "type": "ranged",
+        "damage": 150,
+        "stamina_cost": 4,
+        "cooldown": 15,
+        "projectile_speed": 50,
+        "size": 50
+    },
+    "sabre_plasma": {
+        "name": "Sabre Plasma",
+        "epoch": "futuristique",
+        "image_path": ("weapons", "os_dj_1.png"),
+        "type": "melee",
+        "damage": 180,
+        "stamina_cost": 5,
+        "cooldown": 25,
+        "range": 135,
+        "size": 70
     }
 }
 
-# Types d'ennemis
-ENEMY_TYPES = {
-    'Tank': {
-        'health_modifier': 2.0,
-        'speed_modifier': 0.5,
-        'damage_modifier': 1.5,
-        'color': BLUE
+# ============= DÉFINITION DES ÉPOQUES =============
+EPOCHS = {
+    "prehistoire": {
+        "name": "Préhistoire",
+        "player_type": "homme_prehistorique",
+        "weapons": ["caillou", "os"],
+        "background": "decor_dj_1.jpg",
+        "enemy_image": "monstre_dj_1.png",
+        "color_theme": BROWN,
+        "wave_multiplier": 1.0,
+        "next_epoch": "grece"
     },
-    'Rusher': {
-        'health_modifier': 0.7,
-        'speed_modifier': 2.0,
-        'damage_modifier': 0.8,
-        'color': ORANGE
+    "grece": {
+        "name": "Grèce Antique",
+        "player_type": "soldat_grec",
+        "weapons": ["arc", "lance"],
+        "background": "decor_dj_1.jpg",
+        "enemy_image": "monstre_dj_1.png",
+        "color_theme": GOLD,
+        "wave_multiplier": 1.2,
+        "next_epoch": "edo"
     },
-    'Sniper': {
-        'health_modifier': 0.8,
-        'speed_modifier': 0.8,
-        'damage_modifier': 1.2,
-        'color': PURPLE
+    "edo": {
+        "name": "Japon Edo",
+        "player_type": "samurai",
+        "weapons": ["katana", "shuriken"],
+        "background": "decor_dj_1.jpg",
+        "enemy_image": "monstre_dj_1.png",
+        "color_theme": RED,
+        "wave_multiplier": 1.5,
+        "next_epoch": "moderne"
+    },
+    "moderne": {
+        "name": "Époque Moderne",
+        "player_type": "soldat_napoleonien",
+        "weapons": ["carabine", "pistolet"],
+        "background": "decor_dj_1.jpg",
+        "enemy_image": "monstre_dj_1.png",
+        "color_theme": BLUE,
+        "wave_multiplier": 1.8,
+        "next_epoch": "contemporain"
+    },
+    "contemporain": {
+        "name": "Époque Contemporaine",
+        "player_type": "soldat_ww2",
+        "weapons": ["ak47", "baionnette"],
+        "background": "decor_dj_1.jpg",
+        "enemy_image": "monstre_dj_1.png",
+        "color_theme": GRAY,
+        "wave_multiplier": 2.2,
+        "next_epoch": "futuristique"
+    },
+    "futuristique": {
+        "name": "Futur",
+        "player_type": "demembreur",
+        "weapons": ["laser", "sabre_plasma"],
+        "background": "decor_dj_1.jpg",
+        "enemy_image": "monstre_dj_1.png",
+        "color_theme": CYAN,
+        "wave_multiplier": 2.5,
+        "next_epoch": None
     }
 }
 
-# Types de power-ups
-POWERUP_TYPES = {
-    'damage': {
-        'color': RED,
-        'multiplier': 2.0
+# ============= COMPÉTENCES =============
+SKILLS = {
+    "tank": {
+        "name": "Tank",
+        "desc": "150 PV, -30% vitesse",
+        "special": "Bouclier -50% dégâts",
+        "color": BLUE
     },
-    'speed': {
-        'color': GREEN,
-        'multiplier': 1.5
+    "berserker": {
+        "name": "Berserker", 
+        "desc": "80 PV, +30% vitesse",
+        "special": "Rage x2 dégâts 5s",
+        "color": RED
     },
-    'health': {
-        'color': (255, 100, 100),
-        'amount': 30
+    "vampire": {
+        "name": "Vampire",
+        "desc": "Stats normales",
+        "special": "+10 PV par kill 10s",
+        "color": PURPLE
     },
-    'stamina': {
-        'color': YELLOW,
-        'multiplier': 2.0
+    "ninja": {
+        "name": "Ninja",
+        "desc": "+15% vitesse, Dash CD/2",
+        "special": "Téléportation souris",
+        "color": BLACK
+    },
+    "mage": {
+        "name": "Mage",
+        "desc": "150 Stamina, +50% regen",
+        "special": "Nova de projectiles",
+        "color": CYAN
     }
 }
+
+# ============= PARAMÈTRES DE JEU =============
+WAVES_PER_EPOCH = 3  # Nombre de vagues avant de changer d'époque

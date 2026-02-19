@@ -1,275 +1,250 @@
-"""
-Mobius - Jeu Roguelike Multi-Epoques
-Main.py - Orchestrateur principal du jeu
-"""
+# -*- coding: utf-8 -*-
+# main.py - Fichier principal - Mobius Roguelike
 
 import pygame
 import sys
-from epoques.prehistoric import PrehistoricEpoque
-from epoques.medieval import MedievalEpoque
-from epoques.modern import ModernEpoque
-from epoques.futuristic import FuturisticEpoque
-from core.player import Player
-import core.constants as constants
+from core.constants import *
 
-# Initialiser pygame pour accéder aux infos d'écran
-pygame.init()
-monitor_info = pygame.display.Info()
+# Import des salles
+from epoques.prehistoire import PrehistoireRoom
+from epoques.grece import GreceRoom
+from epoques.edo import EdoRoom
+from epoques.moderne import ModerneRoom
+from epoques.contemporain import ContemporainRoom
+from epoques.futuristique import FuturistiqueRoom
 
-# Adapter les constantes d'écran à la résolution actuelle (optionnel)
-# Décommentez les lignes suivantes si vous voulez une résolution adaptative
-# constants.SCREEN_WIDTH = monitor_info.current_w
-# constants.SCREEN_HEIGHT = monitor_info.current_h
-# constants.SCALE_FACTOR = min(constants.SCREEN_WIDTH / constants.REFERENCE_WIDTH, 
-#                               constants.SCREEN_HEIGHT / constants.REFERENCE_HEIGHT)
-
-# Fonction utilitaire pour les tailles de police scalables
-def scale_font_size(size):
-    """Adapte la taille d'une police à la résolution"""
-    return int(size * constants.SCALE_FACTOR)
 
 class Game:
+    """Classe principale du jeu"""
+    
     def __init__(self):
         pygame.init()
-        self.screen = pygame.display.set_mode((constants.SCREEN_WIDTH, constants.SCREEN_HEIGHT))
-        pygame.display.set_caption("Mobius - Journey Through Time")
+        self.screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+        pygame.display.set_caption("Mobius Roguelike")
         self.clock = pygame.time.Clock()
-        self.running = True
-        self.current_epoque = None
-        self.player = None
-        self.epoque_sequence = [
-            PrehistoricEpoque,
-            MedievalEpoque,
-            ModernEpoque,
-            FuturisticEpoque
-        ]
-        self.current_epoque_index = 0
         
-    def select_class(self):
-        """Menu de sélection de classe"""
-        selecting = True
-        selected_class = None
+        # Fonts
+        self.font_large = pygame.font.Font(None, 72)
+        self.font_medium = pygame.font.Font(None, 36)
+        self.font_small = pygame.font.Font(None, 24)
         
-        font_title = pygame.font.Font(None, scale_font_size(74))
-        font_text = pygame.font.Font(None, scale_font_size(36))
+        # États
+        self.game_state = MENU
+        self.selected_skill = None
+        self.current_epoch = "prehistoire"
         
-        classes = {
-            '1': 'Tank',
-            '2': 'Berserker',
-            '3': 'Vampire',
-            '4': 'Ninja',
-            '5': 'Mage'
+        # Salles
+        self.rooms = {
+            "prehistoire": PrehistoireRoom(self),
+            "grece": GreceRoom(self),
+            "edo": EdoRoom(self),
+            "moderne": ModerneRoom(self),
+            "contemporain": ContemporainRoom(self),
+            "futuristique": FuturistiqueRoom(self)
         }
         
-        while selecting:
-            self.screen.fill(constants.BLACK)
-            
-            # Titre
-            title = font_title.render("MOBIUS", True, constants.GOLD)
-            self.screen.blit(title, (constants.SCREEN_WIDTH//2 - title.get_width()//2, 50))
-            
-            subtitle = font_text.render("Choisissez votre classe", True, constants.WHITE)
-            self.screen.blit(subtitle, (constants.SCREEN_WIDTH//2 - subtitle.get_width()//2, 150))
-            
-            # Affichage des classes
-            y = 250
-            for key, class_name in classes.items():
-                text = font_text.render(f"{key}. {class_name}", True, constants.WHITE)
-                self.screen.blit(text, (constants.SCREEN_WIDTH//2 - text.get_width()//2, y))
-                y += 60
-            
-            pygame.display.flip()
-            
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    sys.exit()
-                if event.type == pygame.KEYDOWN:
-                    if event.unicode in classes:
-                        selected_class = classes[event.unicode]
-                        selecting = False
-                        
-        return selected_class
+        self.current_room = None
+        self.player_skill = None
+        
+        # Background menu
+        try:
+            self.menu_background = pygame.image.load(get_asset_path("backgrounds", "decor_dj_1.jpg")).convert()
+            self.menu_background = pygame.transform.scale(self.menu_background, (SCREEN_WIDTH, SCREEN_HEIGHT))
+        except:
+            self.menu_background = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
+            self.menu_background.fill(BLACK)
     
-    def transition_screen(self, epoque_name):
-        """Ecran de transition entre epoques"""
-        font = pygame.font.Font(None, scale_font_size(74))
-        transition_time = 3000
-        start_time = pygame.time.get_ticks()
+    def draw_menu(self):
+        """Affiche le menu de sélection de compétences"""
+        self.screen.blit(self.menu_background, (0, 0))
         
-        while pygame.time.get_ticks() - start_time < transition_time:
-            self.screen.fill(constants.BLACK)
+        # Titre
+        title = self.font_large.render("MOBIUS ROGUELIKE", True, WHITE)
+        self.screen.blit(title, title.get_rect(center=(SCREEN_WIDTH // 2, 100)))
+        
+        subtitle = self.font_medium.render("Choisissez votre classe", True, WHITE)
+        self.screen.blit(subtitle, subtitle.get_rect(center=(SCREEN_WIDTH // 2, 160)))
+        
+        # Cartes de compétences
+        skill_keys = list(SKILLS.keys())
+        card_width, card_height = 200, 250
+        spacing = 30
+        total_width = len(skill_keys) * card_width + (len(skill_keys) - 1) * spacing
+        start_x = (SCREEN_WIDTH - total_width) // 2
+        y = 250
+        
+        mouse_pos = pygame.mouse.get_pos()
+        
+        for i, skill_key in enumerate(skill_keys):
+            skill = SKILLS[skill_key]
+            x = start_x + i * (card_width + spacing)
+            card_rect = pygame.Rect(x, y, card_width, card_height)
             
-            text = font.render(f"Epoque: {epoque_name}", True, constants.GOLD)
-            self.screen.blit(text, (constants.SCREEN_WIDTH//2 - text.get_width()//2, constants.SCREEN_HEIGHT//2))
+            # Hover effect
+            is_hover = card_rect.collidepoint(mouse_pos)
             
-            pygame.display.flip()
-            self.clock.tick(constants.FPS)
+            # Fond
+            card_surface = pygame.Surface((card_width, card_height))
+            card_surface.fill(skill["color"])
+            card_surface.set_alpha(150)
+            self.screen.blit(card_surface, (x, y))
             
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    sys.exit()
+            # Bordure
+            pygame.draw.rect(self.screen, GOLD if is_hover else WHITE, card_rect, 4 if is_hover else 2)
+            
+            # Nom
+            name = self.font_medium.render(skill["name"], True, WHITE)
+            self.screen.blit(name, name.get_rect(center=(x + card_width // 2, y + 30)))
+            
+            # Description
+            y_offset = 70
+            for line in [skill["desc"], "", skill["special"]]:
+                if line:
+                    text = self.font_small.render(line, True, WHITE)
+                    self.screen.blit(text, text.get_rect(center=(x + card_width // 2, y + y_offset)))
+                y_offset += 25
+            
+            # Numéro
+            num = self.font_small.render(f"Appuyez sur {i+1}", True, YELLOW)
+            self.screen.blit(num, num.get_rect(center=(x + card_width // 2, y + card_height - 30)))
+            
+            if is_hover:
+                self.selected_skill = skill_key
+        
+        # Instructions
+        instructions = self.font_small.render("Cliquez sur une carte ou utilisez les touches 1-5", True, WHITE)
+        self.screen.blit(instructions, instructions.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 50)))
     
-    def start_new_game(self):
-        """Démarre une nouvelle partie"""
-        player_class = self.select_class()
-        self.player = Player(player_class)
-        self.current_epoque_index = 0
-        self.load_epoque()
-        
-    def load_epoque(self):
-        """Charge l'epoque courante"""
-        if self.current_epoque_index >= len(self.epoque_sequence):
-            self.victory_screen()
-            return
+    def start_game(self, skill):
+        """Démarre le jeu avec la compétence choisie"""
+        self.player_skill = skill
+        self.current_epoch = "prehistoire"
+        self.current_room = self.rooms[self.current_epoch]
+        self.current_room.start(skill)
+        self.game_state = PLAYING
+    
+    def change_epoch(self, next_epoch):
+        """Change d'époque (salle)"""
+        if next_epoch and next_epoch in self.rooms:
+            # Sauvegarder stats du joueur
+            player_stats = {
+                "skill": self.current_room.player.skill,
+                "kills": self.current_room.player.kills,
+                "coins": self.current_room.player.coins,
+                "health": self.current_room.player.health,
+                "max_health": self.current_room.player.max_health,
+                "stamina": self.current_room.player.stamina,
+                "max_stamina": self.current_room.player.max_stamina
+            }
             
-        EpoqueClass = self.epoque_sequence[self.current_epoque_index]
-        self.current_epoque = EpoqueClass(self.player)
-        self.transition_screen(self.current_epoque.name)
-        
-    def next_epoque(self):
-        """Passe à l'epoque suivante"""
-        self.current_epoque_index += 1
-        if self.current_epoque_index < len(self.epoque_sequence):
-            self.load_epoque()
+            # Changer de salle
+            self.current_epoch = next_epoch
+            self.current_room = self.rooms[next_epoch]
+            self.current_room.start(player_stats["skill"], player_stats)
         else:
-            self.victory_screen()
-            
-    def game_over_screen(self):
-        """Écran de fin de partie"""
-        font_title = pygame.font.Font(None, scale_font_size(74))
-        font_text = pygame.font.Font(None, scale_font_size(36))
-        
-        waiting = True
-        while waiting:
-            self.screen.fill(constants.BLACK)
-            
-            title = font_title.render("GAME OVER", True, constants.RED)
-            self.screen.blit(title, (constants.SCREEN_WIDTH//2 - title.get_width()//2, 200))
-            
-            restart = font_text.render("R - Recommencer", True, constants.WHITE)
-            menu = font_text.render("M - Menu", True, constants.WHITE)
-            quit_text = font_text.render("ESC - Quitter", True, constants.WHITE)
-            
-            self.screen.blit(restart, (constants.SCREEN_WIDTH//2 - restart.get_width()//2, 350))
-            self.screen.blit(menu, (constants.SCREEN_WIDTH//2 - menu.get_width()//2, 400))
-            self.screen.blit(quit_text, (constants.SCREEN_WIDTH//2 - quit_text.get_width()//2, 450))
-            
-            pygame.display.flip()
-            
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    sys.exit()
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_r:
-                        self.start_new_game()
-                        waiting = False
-                    elif event.key == pygame.K_m:
-                        self.main_menu()
-                        waiting = False
-                    elif event.key == pygame.K_ESCAPE:
-                        pygame.quit()
-                        sys.exit()
-                        
-    def victory_screen(self):
-        """Écran de victoire"""
-        font_title = pygame.font.Font(None, scale_font_size(74))
-        font_text = pygame.font.Font(None, scale_font_size(36))
-        
-        waiting = True
-        while waiting:
-            self.screen.fill(constants.BLACK)
-            
-            title = font_title.render("VICTOIRE!", True, constants.GOLD)
-            self.screen.blit(title, (constants.SCREEN_WIDTH//2 - title.get_width()//2, 200))
-            
-            subtitle = font_text.render("Vous avez traverse toutes les epoques!", True, constants.WHITE)
-            self.screen.blit(subtitle, (constants.SCREEN_WIDTH//2 - subtitle.get_width()//2, 300))
-            
-            menu = font_text.render("M - Menu", True, constants.WHITE)
-            quit_text = font_text.render("ESC - Quitter", True, constants.WHITE)
-            
-            self.screen.blit(menu, (constants.SCREEN_WIDTH//2 - menu.get_width()//2, 400))
-            self.screen.blit(quit_text, (constants.SCREEN_WIDTH//2 - quit_text.get_width()//2, 450))
-            
-            pygame.display.flip()
-            
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    sys.exit()
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_m:
-                        self.main_menu()
-                        waiting = False
-                    elif event.key == pygame.K_ESCAPE:
-                        pygame.quit()
-                        sys.exit()
+            # Victoire finale !
+            self.game_state = GAME_OVER
     
-    def main_menu(self):
-        """Menu principal"""
-        font_title = pygame.font.Font(None, scale_font_size(74))
-        font_text = pygame.font.Font(None, scale_font_size(36))
+    def handle_menu_events(self, event):
+        """Gère les événements du menu"""
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                return False
+            skill_keys = list(SKILLS.keys())
+            for i, skill in enumerate(skill_keys):
+                if event.key == pygame.K_1 + i:
+                    self.start_game(skill)
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            if event.button == 1 and self.selected_skill:
+                self.start_game(self.selected_skill)
+        return True
+    
+    def draw_game_over(self):
+        """Affiche l'écran de game over"""
+        self.screen.blit(self.menu_background, (0, 0))
         
-        in_menu = True
-        while in_menu:
-            self.screen.fill(constants.BLACK)
+        overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
+        overlay.set_alpha(200)
+        overlay.fill(BLACK)
+        self.screen.blit(overlay, (0, 0))
+        
+        # Titre
+        title = self.font_large.render("GAME OVER", True, RED)
+        self.screen.blit(title, title.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 100)))
+        
+        # Stats
+        if self.current_room and self.current_room.player:
+            y = SCREEN_HEIGHT // 2 - 30
+            stats = [
+                (f"Époque atteinte: {EPOCHS[self.current_epoch]['name']}", WHITE),
+                (f"Ennemis tués: {self.current_room.player.kills}", WHITE),
+                (f"Pièces collectées: {self.current_room.player.coins}", GOLD)
+            ]
             
-            title = font_title.render("MOBIUS", True, constants.GOLD)
-            subtitle = font_text.render("Journey Through Time", True, constants.WHITE)
-            
-            self.screen.blit(title, (constants.SCREEN_WIDTH//2 - title.get_width()//2, 150))
-            self.screen.blit(subtitle, (constants.SCREEN_WIDTH//2 - subtitle.get_width()//2, 230))
-            
-            start = font_text.render("Appuyez sur ESPACE pour commencer", True, constants.WHITE)
-            quit_text = font_text.render("ESC pour quitter", True, constants.WHITE)
-            
-            self.screen.blit(start, (constants.SCREEN_WIDTH//2 - start.get_width()//2, 350))
-            self.screen.blit(quit_text, (constants.SCREEN_WIDTH//2 - quit_text.get_width()//2, 400))
-            
-            pygame.display.flip()
-            
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    sys.exit()
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_SPACE:
-                        in_menu = False
-                    elif event.key == pygame.K_ESCAPE:
-                        pygame.quit()
-                        sys.exit()
-                        
-        self.start_new_game()
+            for text, color in stats:
+                rendered = self.font_medium.render(text, True, color)
+                self.screen.blit(rendered, rendered.get_rect(center=(SCREEN_WIDTH // 2, y)))
+                y += 40
+        
+        # Instructions
+        restart = self.font_medium.render("R: Rejouer | M: Menu | ESC: Quitter", True, WHITE)
+        self.screen.blit(restart, restart.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 120)))
     
     def run(self):
         """Boucle principale du jeu"""
-        self.main_menu()
+        running = True
         
-        while self.running:
+        while running:
+            self.clock.tick(60)
+            
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    self.running = False
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_ESCAPE:
-                        self.main_menu()
-            
-            if self.current_epoque:
-                result = self.current_epoque.update()
+                    running = False
                 
-                if result == "next_epoque":
-                    self.next_epoque()
-                elif result == "game_over":
-                    self.game_over_screen()
-                    
-                self.current_epoque.draw(self.screen)
+                if self.game_state == MENU:
+                    running = self.handle_menu_events(event)
+                
+                elif self.game_state == PLAYING:
+                    result = self.current_room.handle_event(event)
+                    if result == "MENU":
+                        self.game_state = MENU
+                    elif result == "GAME_OVER":
+                        self.game_state = GAME_OVER
+                    elif result and result.startswith("NEXT_EPOCH:"):
+                        next_epoch = result.split(":")[1]
+                        self.change_epoch(next_epoch)
+                
+                elif self.game_state == GAME_OVER:
+                    if event.type == pygame.KEYDOWN:
+                        if event.key == pygame.K_r:
+                            self.start_game(self.player_skill)
+                        elif event.key == pygame.K_m:
+                            self.game_state = MENU
+                        elif event.key == pygame.K_ESCAPE:
+                            running = False
+            
+            # Mise à jour
+            if self.game_state == PLAYING:
+                result = self.current_room.update()
+                if result == True:  # Game over
+                    self.game_state = GAME_OVER
+                elif result and isinstance(result, str) and result.startswith("NEXT_EPOCH:"):
+                    next_epoch = result.split(":")[1]
+                    self.change_epoch(next_epoch)
+            
+            # Affichage
+            if self.game_state == MENU:
+                self.draw_menu()
+            elif self.game_state == PLAYING:
+                self.current_room.draw(self.screen)
+            elif self.game_state == GAME_OVER:
+                self.draw_game_over()
             
             pygame.display.flip()
-            self.clock.tick(constants.FPS)
         
         pygame.quit()
+        sys.exit()
+
 
 if __name__ == "__main__":
     game = Game()
