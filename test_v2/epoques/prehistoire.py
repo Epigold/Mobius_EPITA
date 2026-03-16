@@ -24,10 +24,10 @@ class PrehistoireRoom(BaseRoom):
         self._fire_timer = 0   # animation torches
 
     def on_enter(self):
-        print("🪨 Bienvenue à l'âge de pierre !")
+        print("Bienvenue à l'âge de pierre !")
 
     def on_exit(self):
-        print("✅ L'homme préhistorique évolue !")
+        print("L'homme préhistorique évolue !")
 
     def draw_epoch_decoration(self, surface):
         self._fire_timer += 1
