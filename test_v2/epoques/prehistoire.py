@@ -1,97 +1,82 @@
 # -*- coding: utf-8 -*-
-# prehistoire.py - Salle de l'époque Préhistoire
+# epoques/prehistoire.py
 
 """
-ÉPOQUE: PRÉHISTOIRE
-Personnage: Homme préhistorique
-Armes: Caillou (distance), Os (mêlée)
-Thème: Brun, environnement primitif
-Difficulté: x1.0 (époque de base)
+ÉPOQUE : PRÉHISTOIRE
+Personnage : Homme préhistorique
+Armes     : Caillou (distance) · Os (mêlée)
+Thème     : Brun, grotte, feu
+Difficulté: ×1.0
+
+Graphismes :
+  • Sprites PNG propres (fond transparent) depuis assets/sprites_prehistoire/
+  • AnimController : idle 4f · walk 4f · run 6f interpolées · dash · hurt
+  • Personnage toujours orienté vers la souris (flip horizontal)
+  • Arme rotative pointée vers le curseur
 """
 
-from core.base_room import BaseRoom
-from core.constants import *
 import pygame
+import math
+from core.base_room  import BaseRoom
+from core.constants  import *
+from core.player_anim import (patch_player_for_prehistoire,
+                               draw_weapon_hand,
+                               PrehistoireSprites)
 
 
 class PrehistoireRoom(BaseRoom):
-    """
-    Salle de l'époque Préhistoire
-    
-    Premier niveau du jeu, introduit les mécaniques de base.
-    Les ennemis sont moins nombreux et moins résistants.
-    """
-    
+
     def __init__(self, game):
         super().__init__(game, "prehistoire")
-        
-        # Personnalisation de l'époque
         self.epoch_name_display = "ÈRE PRÉHISTORIQUE"
-        self.theme_color = BROWN
-        
-        # Messages spécifiques à l'époque
-        self.welcome_message = "Bienvenue à l'âge de pierre !"
-        self.victory_message = "L'homme préhistorique évolue !"
-        
-        # Effets visuels spécifiques (optionnel)
-        self.particles = []
-    
+        self.theme_color        = PREHISTOIRE_COLOR
+        self._fire_timer        = 0
+        # Pré-charge les sprites au démarrage
+        self._prehist_sprites   = None   # chargé au premier start()
+
+    # ── Hooks ────────────────────────────────────────────────────────────────
+
     def on_enter(self):
-        """Appelé quand le joueur entre dans cette salle"""
-        print(f"🪨 {self.welcome_message}")
-        # Ici vous pouvez ajouter des effets d'entrée spécifiques
-    
+        print("🪨 Bienvenue à l'âge de pierre !")
+
     def on_exit(self):
-        """Appelé quand le joueur quitte cette salle"""
-        print(f"✅ {self.victory_message}")
-        # Ici vous pouvez ajouter des effets de sortie spécifiques
-    
-    def draw_epoch_decoration(self, surface):
-        """Dessine des décorations spécifiques à l'époque"""
-        # Titre de l'époque dans le coin
-        font = pygame.font.Font(None, 28)
-        epoch_text = font.render(self.epoch_name_display, True, self.theme_color)
-        text_rect = epoch_text.get_rect()
-        text_rect.topright = (SCREEN_WIDTH - 20, 50)
-        
-        # Fond semi-transparent
-        bg_rect = text_rect.inflate(20, 10)
-        bg_surface = pygame.Surface((bg_rect.width, bg_rect.height))
-        bg_surface.fill(BLACK)
-        bg_surface.set_alpha(150)
-        surface.blit(bg_surface, bg_rect)
-        
-        # Texte
-        surface.blit(epoch_text, text_rect)
-    
+        print("✅ L'homme préhistorique évolue !")
+
+    # ── Surcharge start() pour patcher le joueur ─────────────────────────────
+
+    def start(self, skill_or_data, player_stats=None):
+        super().start(skill_or_data, player_stats)
+        # Charger sprites (une seule fois grâce au singleton)
+        self._prehist_sprites = PrehistoireSprites.get()
+        # Patcher le joueur avec le système d'animation
+        patch_player_for_prehistoire(self.player)
+
+    # ── Surcharge draw() pour le rendu de l'arme ────────────────────────────
+
     def draw(self, surface):
-        """Surcharge pour ajouter des éléments visuels spécifiques"""
-        # Appel à la méthode de base
+        # Rendu de base (background, sprites, HUD…)
         super().draw(surface)
-        
-        # Ajout des décorations de l'époque
-        self.draw_epoch_decoration(surface)
-        
-        # Message de bienvenue au début
-        if self.wave == 1 and not self.wave_complete and len(self.enemies) > 0:
-            font = pygame.font.Font(None, 32)
-            welcome = font.render(self.welcome_message, True, BROWN)
-            welcome_rect = welcome.get_rect(center=(SCREEN_WIDTH // 2, 150))
-            
-            # Fond
-            bg_rect = welcome_rect.inflate(30, 15)
-            bg_surface = pygame.Surface((bg_rect.width, bg_rect.height))
-            bg_surface.fill(BLACK)
-            bg_surface.set_alpha(200)
-            surface.blit(bg_surface, bg_rect)
-            
-            surface.blit(welcome, welcome_rect)
-    
-    def get_epoch_tips(self):
-        """Retourne des conseils spécifiques à l'époque"""
-        return [
-            "Utilisez le Caillou pour attaquer à distance",
-            "L'Os inflige plus de dégâts en mêlée",
-            "Utilisez le Dash (Espace) pour éviter les ennemis",
-            "La Stamina se régénère automatiquement"
-        ]
+
+        # Arme dans la main (par-dessus le HUD, juste devant le perso)
+        if self.player and self._prehist_sprites:
+            wk = self.player.current_weapon.key if self.player.current_weapon else "rock"
+            draw_weapon_hand(
+                surface,
+                self.player.rect,
+                wk,
+                self.player.facing_right,
+                self._prehist_sprites,
+            )
+
+    # ── Décorations époque ───────────────────────────────────────────────────
+
+    def draw_epoch_decoration(self, surface):
+        self._fire_timer += 1
+        for fx, fy in [(80, SCREEN_HEIGHT - 160), (SCREEN_WIDTH - 80, SCREEN_HEIGHT - 160)]:
+            flicker = abs(math.sin(self._fire_timer * 0.15)) * 8
+            pygame.draw.polygon(surface, (255, 160, 30),
+                                [(fx, fy + 22), (fx - 8, fy - 5 - flicker),
+                                 (fx + 8, fy - 5 - flicker)])
+            pygame.draw.polygon(surface, (255, 220, 80),
+                                [(fx, fy + 14), (fx - 4, fy - 2 - flicker // 2),
+                                 (fx + 4, fy - 2 - flicker // 2)])
