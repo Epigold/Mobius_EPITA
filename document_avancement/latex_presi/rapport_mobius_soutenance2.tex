@@ -1,0 +1,790 @@
+% ============================================================
+%  RAPPORT DE SOUTENANCE — MOBIUS ROGUELIKE
+%  M3G_STUDIO — Projet Jeu3D EPITA 2024-2025
+% ============================================================
+\documentclass[12pt, a4paper]{report}
+
+% ── Encodage & Langue ──────────────────────────────────────
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+
+% ── Mise en page ───────────────────────────────────────────
+\setlength{\headheight}{14pt}
+\usepackage[top=2.5cm, bottom=2.5cm, left=2.8cm, right=2.8cm]{geometry}
+\usepackage{setspace}
+\onehalfspacing
+
+% ── Graphiques & Couleurs ──────────────────────────────────
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{subcaption}
+
+% ── Tableaux ───────────────────────────────────────────────
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{multirow}
+
+% ── Listes & Code ──────────────────────────────────────────
+\usepackage{enumitem}
+\usepackage{listings}
+
+% ── Liens & PDF ────────────────────────────────────────────
+\usepackage[hidelinks]{hyperref}
+
+% ── En-têtes / Pieds de page ───────────────────────────────
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+
+% ── Titres ─────────────────────────────────────────────────
+\usepackage{titlesec}
+
+% ── Divers ─────────────────────────────────────────────────
+
+\usepackage{parskip}
+\usepackage{mdframed}
+\usepackage{amssymb}
+
+% ╔══════════════════════════════════════════════════════════╗
+%  COULEURS M3G_STUDIO
+% ╚══════════════════════════════════════════════════════════╝
+\definecolor{mobiuscyan}{RGB}{0,210,255}
+\definecolor{mobiuspurple}{RGB}{100,40,160}
+\definecolor{mobiusdark}{RGB}{15,15,35}
+\definecolor{accentgold}{RGB}{255,200,0}
+\definecolor{lightgray}{RGB}{245,245,248}
+\definecolor{codesep}{RGB}{200,200,210}
+\definecolor{okgreen}{RGB}{30,140,30}
+\definecolor{warnorange}{RGB}{200,120,0}
+
+% ╔══════════════════════════════════════════════════════════╗
+%  STYLE DES TITRES
+% ╚══════════════════════════════════════════════════════════╝
+\titleformat{\chapter}[block]
+  {\normalfont\huge\bfseries\color{mobiuspurple}}
+  {\thechapter}{1em}{}
+  [\vspace{2pt}\color{mobiuscyan}\hrule height 2pt]
+
+\titleformat{\section}
+  {\normalfont\Large\bfseries\color{mobiuspurple}}
+  {\thesection}{0.8em}{}
+
+\titleformat{\subsection}
+  {\normalfont\large\bfseries\color{mobiusdark}}
+  {\thesubsection}{0.6em}{}
+
+% ╔══════════════════════════════════════════════════════════╗
+%  EN-TÊTES / PIEDS DE PAGE
+% ╚══════════════════════════════════════════════════════════╝
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\textcolor{mobiuspurple}{\textbf{MOBIUS Roguelike}} --- M3G\_STUDIO}
+\fancyhead[R]{\small\textcolor{gray}{Rapport de soutenance}}
+\fancyfoot[C]{\small\thepage\ / \pageref{LastPage}}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.2pt}
+
+% ╔══════════════════════════════════════════════════════════╗
+%  STYLE DE CODE
+% ╚══════════════════════════════════════════════════════════╝
+\lstset{
+  language=Python,
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{mobiuspurple}\bfseries,
+  stringstyle=\color{mobiuscyan},
+  commentstyle=\color{gray}\itshape,
+  backgroundcolor=\color{lightgray},
+  frame=single,
+  rulecolor=\color{codesep},
+  breaklines=true,
+  showstringspaces=false,
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  numbersep=5pt,
+}
+
+% ╔══════════════════════════════════════════════════════════╗
+%  BOÎTES INFO
+% ╚══════════════════════════════════════════════════════════╝
+\newmdenv[
+  linecolor=mobiuscyan,
+  linewidth=2pt,
+  backgroundcolor=mobiuscyan!5,
+  innerleftmargin=10pt,
+  innerrightmargin=10pt,
+  innertopmargin=8pt,
+  innerbottommargin=8pt,
+]{infobox}
+
+% ============================================================
+\begin{document}
+
+% ╔══════════════════════════════════════════════════════════╗
+%  PAGE DE TITRE
+% ╚══════════════════════════════════════════════════════════╝
+\begin{titlepage}
+  \pagecolor{mobiusdark}
+  \color{white}
+  \centering
+  \vspace*{1cm}
+
+  \includegraphics[width=0.55\textwidth]{mobius_logo_final.png}\\[1.2cm]
+
+  {\fontsize{42}{50}\selectfont\bfseries\color{mobiuscyan} MOBIUS}\\[0.3cm]
+  {\Large\bfseries\color{white} R O G U E L I K E}\\[0.6cm]
+  \textcolor{accentgold}{\rule{10cm}{1.5pt}}\\[0.5cm]
+
+  {\large\bfseries Rapport de soutenance --- Projet Jeu3D}\\[0.2cm]
+  {\normalsize EPITA --- Promo 2027 --- 2024/2025}\\[1.2cm]
+
+  \colorbox{mobiuspurple!80}{%
+    \parbox{7cm}{\centering\vspace{4pt}
+      {\large\bfseries M3G\_STUDIO}\\[2pt]
+      {\small Studio de d\'{e}veloppement ind\'{e}pendant}
+      \vspace{4pt}
+    }
+  }\\[1.5cm]
+
+  \begin{tabular}{ll}
+    \textbf{\color{mobiuscyan}Georges Boyer}       & Chef de groupe --- D\'{e}veloppement principal \\[4pt]
+    \textbf{\color{mobiuscyan}Madeleine Diop}      & Environnement visuel \& graphismes \\[4pt]
+    \textbf{\color{mobiuscyan}Emile Levast}        & Lore, narration \& site web \\[4pt]
+    \textbf{\color{mobiuscyan}Ma\"{e}l Bosse-Plati\`{e}re} & Multijoueur en ligne \\
+  \end{tabular}\\[2cm]
+
+  \vfill
+  \textcolor{gray}{\today}
+\end{titlepage}
+\nopagecolor
+\color{black}
+
+% ╔══════════════════════════════════════════════════════════╗
+%  TABLE DES MATIÈRES
+% ╚══════════════════════════════════════════════════════════╝
+\tableofcontents
+\newpage
+
+% ============================================================
+\chapter{Introduction}
+
+Ce rapport de soutenance pr\'{e}sente l'avancement du projet \textbf{MOBIUS Roguelike}, r\'{e}alis\'{e} dans le cadre du projet \textit{Jeu3D} de premi\`{e}re ann\'{e}e \`{a} l'EPITA (promo 2027). Il retrace les choix techniques et cr\'{e}atifs effectu\'{e}s par l'\'{e}quipe M3G\_STUDIO, les fonctionnalit\'{e}s impl\'{e}ment\'{e}es, ainsi que le bilan organisationnel du groupe.
+
+% ─────────────────────────────────────────────────────────────
+\section{Pr\'{e}sentation du projet}
+
+MOBIUS est un jeu de type \textit{roguelike} en vue du dessus (\textit{top-down shooter}) d\'{e}velopp\'{e} enti\`{e}rement en Python avec la biblioth\`{e}que Pygame. Le principe central est un voyage \`{a} travers six \'{e}poques historiques : le joueur affronte des vagues d'ennemis propres \`{a} chaque \`{e}re, r\'{e}cup\`{e}re des armes dans des coffres, et tente de survivre jusqu'\`{a} l'\`{e}re Futuriste.
+
+Le jeu propose deux modes : un mode \textbf{solo} et un mode \textbf{multijoueur en ligne} (co-op 2 joueurs via UDP), chacun supportant la s\'{e}lection d'une classe de personnage parmi cinq disponibles.
+
+\begin{infobox}
+\textbf{Fiche technique}\\[4pt]
+\begin{tabular}{ll}
+  \textbf{Moteur / Langage} & Python 3.11+ / Pygame 2.x \\
+  \textbf{R\'{e}solution}       & Plein \'{e}cran adaptatif (d\'{e}tection dynamique) \\
+  \textbf{R\'{e}seau}           & UDP maison, port 55\,555, architecture client-serveur \\
+  \textbf{\'{E}poques}          & 6 (Pr\'{e}histoire $\to$ Gr\`{e}ce $\to$ Edo $\to$ Moderne $\to$ WW2 $\to$ Futur) \\
+  \textbf{Classes}          & 5 (Tank, Berserker, Vampire, Ninja, Archer) \\
+  \textbf{Armes}            & Distanciel, m\^{e}l\'{e}e, AOE selon l'\'{e}poque \\
+\end{tabular}
+\end{infobox}
+
+% ─────────────────────────────────────────────────────────────
+\section{Pr\'{e}sentation du groupe}
+
+Notre groupe M3G\_STUDIO est compos\'{e} de quatre \'{e}tudiants en premi\`{e}re ann\'{e}e \`{a} l'EPITA (promo 2027), r\'{e}unis autour d'une passion commune pour les jeux vid\'{e}o et la programmation.
+
+\subsection{Georges Boyer --- Chef de groupe, d\'{e}veloppement principal}
+
+Passionn\'{e} de programmation, Georges a naturellement pris en charge l'architecture g\'{e}n\'{e}rale du projet. Il a con\c{c}u le moteur de jeu (\texttt{base\_room.py}), l'orchestrateur principal (\texttt{main.py}), le syst\`{e}me de m\'{e}caniques (\texttt{mechanics.py}) et les constantes globales (\texttt{constants.py}). En tant que chef de groupe, il a \'{e}galement coordonn\'{e} les r\'{e}unions d'avancement et l'int\'{e}gration des diff\'{e}rents modules.
+
+\textit{``Ce projet repr\'{e}sentait un vrai d\'{e}fi : passer de scripts Python isol\'{e}s \`{a} une architecture modulaire compl\`{e}te, capable de supporter un mode r\'{e}seau. C'est la partie qui m'a le plus appris sur la conception logicielle.''}
+
+\subsection{Madeleine Diop --- Environnement visuel \& graphismes}
+
+Madeleine a pris en charge tout le rendu visuel du jeu : cr\'{e}ation des fonds th\'{e}matiques par \'{e}poque, effets de particules (p\'{e}tales de cerisier dans l'\`{e}re Edo, pluie WW2, fum\'{e}e napol\'{e}onienne, scan holographique futuriste), et coh\'{e}rence graphique globale. Elle a d\'{e}velopp\'{e} le module \texttt{graphics.py} comprenant le \texttt{SpriteCache}, le \texttt{BackgroundRenderer} et les \texttt{ScreenEffects}.
+
+\textit{``Rendre chaque \'{e}poque unique visuellement sans alourdir les performances a \'{e}t\'{e} mon d\'{e}fi principal. Les effets de particules diff\'{e}renci\'{e}s par \'{e}poque ont vraiment enrichi l'immersion.''}
+
+\subsection{Emile Levast --- Lore, narration \& site web}
+
+Emile s'est charg\'{e} de l'univers narratif du jeu et de la communication externe. Il a d\'{e}fini le \textit{lore} de MOBIUS (l'histoire du voyageur temporel, la logique des six \'{e}poques), r\'{e}dig\'{e} les textes du jeu, et d\'{e}velopp\'{e} le site web de M3G\_STUDIO.
+
+\textit{``Construire un univers coh\'{e}rent autour d'un gameplay roguelike \'{e}tait un exercice d'\'{e}criture contraignant mais passionnant. Chaque \'{e}poque devait avoir sa propre logique narrative.''}
+
+\subsection{Ma\"{e}l Bosse-Plati\`{e}re --- Multijoueur en ligne}
+
+Ma\"{e}l a d\'{e}velopp\'{e} le module r\'{e}seau complet du jeu (\texttt{network.py}). Il a impl\'{e}ment\'{e} une architecture client-serveur UDP maison : le \texttt{GameServer} joue le r\^{o}le de serveur autoritaire, le \texttt{GameClient} envoie ses inputs et re\c{c}oit l'\'{e}tat du jeu pour l'afficher via le \texttt{ClientRenderer}.
+
+\textit{``Impl\'{e}menter un protocole r\'{e}seau from scratch en UDP \'{e}tait de loin la partie la plus complexe. G\'{e}rer les timeouts, la d\'{e}synchronisation et la latence m'a donn\'{e} un aper\c{c}u concret des d\'{e}fis du multijoueur.''}
+
+% ─────────────────────────────────────────────────────────────
+\section{But du projet}
+
+\subsection{Origine}
+
+M3G\_STUDIO est n\'{e} de la volont\'{e} de cr\'{e}er un jeu original qui d\'{e}passe le simple exercice scolaire. L'id\'{e}e centrale --- traverser les grandes \'{e}poques de l'humanit\'{e} en affrontant des ennemis historiques --- est n\'{e}e d'une r\'{e}flexion sur ce qui rend un roguelike rejouable : la variation. En changeant radicalement d'univers visuel, d'armes et d'ennemis \`{a} chaque \'{e}poque, chaque run offre une exp\'{e}rience diff\'{e}rente.
+
+\subsection{Nature du jeu}
+
+MOBIUS est un \textit{top-down shooter roguelike} : le joueur \'{e}volue dans des ar\`{e}nes en vue a\'{e}rienne, \'{e}limine des vagues d'ennemis de difficult\'{e} croissante, et r\'{e}cup\`{e}re des am\'{e}liorations (power-ups) et armes dans des coffres. La m\'{e}canique de progression par \'{e}poques --- chacune avec ses propres ennemis, armes et ambiance visuelle --- est le fil conducteur du jeu.
+
+\subsection{Objectif}
+
+Livrer un jeu jouable, complet et soign\'{e} : menus anim\'{e}s, s\'{e}lection de classe, six \'{e}poques jouables, mode solo et multijoueur en ligne, et un rendu visuel coh\'{e}rent avec l'identit\'{e} de M3G\_STUDIO.
+
+% ─────────────────────────────────────────────────────────────
+\section{Pr\'{e}sentation de l'entreprise fictive}
+
+\textbf{M3G\_STUDIO} a \'{e}t\'{e} fond\'{e} pour ce projet par les quatre membres de l'\'{e}quipe. Le nom reprend les initiales des fondateurs et affirme une identit\'{e} collective. Notre studio se sp\'{e}cialise dans les jeux ind\'{e}pendants \`{a} fort caract\`{e}re narratif et visuel, en particulier les roguelikes et les jeux d'action \`{a} progression.
+
+Notre premier titre, \textbf{MOBIUS Roguelike}, illustre notre philosophie : un gameplay accessible mais profond, une direction artistique soign\'{e}e, et une rejouabilit\'{e} port\'{e}e par la variation des univers.
+
+% ─────────────────────────────────────────────────────────────
+\section{\'{E}tat de l'art \& inspirations}
+
+\subsection{\'{E}tat de l'art}
+
+Le genre roguelike top-down est largement repr\'{e}sent\'{e} dans l'industrie ind\'{e}pendante. Parmi les titres de r\'{e}f\'{e}rence :
+
+\begin{itemize}[noitemsep]
+  \item \textbf{Enter the Gungeon} (Dodge Roll, 2016) : r\'{e}f\'{e}rence du top-down shooter roguelike avec progression par armes.
+  \item \textbf{Hades} (Supergiant Games, 2020) : roguelike narratif avec runs courts et progression m\'{e}ta.
+  \item \textbf{Nuclear Throne} (Vlambeer, 2015) : roguelike action intense avec personnages aux capacit\'{e}s distinctes.
+  \item \textbf{Vampire Survivors} (poncle, 2022) : popularisation du \textit{bullet heaven} avec progression automatique.
+  \item \textbf{Call of Duty Zombies} (Treyarch, 2008) : inspiration pour le syst\`{e}me de vagues d'ennemis croissantes.
+\end{itemize}
+
+MOBIUS se diff\'{e}rencie par son syst\`{e}me d'\'{e}poques historiques qui transforme radicalement l'ambiance et les m\'{e}caniques \`{a} chaque niveau, et par son mode co-op en ligne int\'{e}gr\'{e}.
+
+\subsection{Inspirations directes}
+
+\textbf{Enter the Gungeon} a directement inspir\'{e} notre syst\`{e}me d'armes vari\'{e}es et la m\'{e}canique de coffres cachant des armes. La s\'{e}lection de classe avant le run s'inspire de \textbf{Hades}. La progression en vagues de difficult\'{e} croissante s'inspire de \textbf{Vampire Survivors} et de \textbf{Call of Duty Zombies}.
+
+% ─────────────────────────────────────────────────────────────
+\section{R\'{e}partition des t\^{a}ches}
+
+\begin{table}[H]
+\centering
+\caption{R\'{e}partition des t\^{a}ches par membre}
+\begin{tabularx}{\textwidth}{|l|X|c|}
+\hline
+\textbf{Membre} & \textbf{P\'{e}rim\`{e}tre} & \textbf{\'{E}tat} \\
+\hline
+Georges Boyer     & Architecture (base\_room, main, mechanics, constants), IA ennemis, syst\`{e}me d'armes, classes joueur, coffres, power-ups & \textcolor{okgreen}{\textbf{Termin\'{e}}} \\
+\hline
+Madeleine Diop    & Graphismes (graphics.py), effets par \'{e}poque, backgrounds, HUD, sprites & \textcolor{okgreen}{\textbf{Termin\'{e}}} \\
+\hline
+Emile Levast      & Lore des \'{e}poques, textes in-game, site web M3G\_STUDIO & \textcolor{okgreen}{\textbf{Termin\'{e}}} \\
+\hline
+Ma\"{e}l Bosse-Plati\`{e}re & Module r\'{e}seau UDP (network.py), synchronisation client-serveur, gestion d\'{e}connexion & \textcolor{warnorange}{\textbf{En cours}} \\
+\hline
+\end{tabularx}
+\end{table}
+
+% ─────────────────────────────────────────────────────────────
+\section{Ressenti global du projet}
+
+Le d\'{e}veloppement de MOBIUS a \'{e}t\'{e} une exp\'{e}rience intense et formatrice. Partir d'une id\'{e}e et aboutir \`{a} un jeu fonctionnel avec menu, multijoueur, six univers distincts et un syst\`{e}me de classes en quelques semaines nous a confront\'{e}s \`{a} des d\'{e}fis bien au-del\`{a} du simple cours de Python. Les difficult\'{e}s ont \'{e}t\'{e} nombreuses --- synchronisation r\'{e}seau, gestion des ressources visuelles, coh\'{e}rence des \'{e}tats du jeu --- mais chaque obstacle r\'{e}solu a renforc\'{e} notre ma\^{i}trise des outils et notre dynamique d'\'{e}quipe.
+
+% ============================================================
+\chapter{Avancement du projet}
+
+% ─────────────────────────────────────────────────────────────
+\section{Sc\'{e}nario et univers}
+
+\subsection{Contexte narratif}
+
+Le joueur incarne un voyageur temporel coinc\'{e} dans une boucle infinie --- une \textit{bande de M\"{o}bius} --- qui le fait traverser six \'{e}poques de l'histoire humaine. \`{A} chaque \'{e}poque, des cr\'{e}atures hostiles ont envahi la ligne temporelle et menacent l'int\'{e}grit\'{e} du continuum. Le joueur doit les \'{e}liminer pour passer \`{a} l'\'{e}poque suivante, en s'adaptant aux armes et aux techniques de combat propres \`{a} chaque \`{e}re.
+
+\subsection{Progression par \'{e}poques}
+
+\begin{table}[H]
+\centering
+\caption{\'{E}poque, th\`{e}me et multiplicateur de difficult\'{e}}
+\begin{tabular}{clcl}
+\toprule
+\textbf{Ordre} & \textbf{\'{E}poque} & \textbf{Difficult\'{e}} & \textbf{Ambiance} \\
+\midrule
+1 & Pr\'{e}histoire       & $\times 1.0$ & \^{A}ge de pierre, cavernes, feux de camp \\
+2 & Gr\`{e}ce Antique    & $\times 1.3$ & Temples, Olympe, soleil m\'{e}diterran\'{e}en \\
+3 & P\'{e}riode Edo      & $\times 1.6$ & Japon m\'{e}di\'{e}val, cerisiers, nuit \'{e}toil\'{e}e \\
+4 & \`{E}re Moderne      & $\times 2.0$ & Napol\'{e}on, champs de bataille, fum\'{e}e de canon \\
+5 & Guerre Mondiale  & $\times 2.5$ & WW2, jungle, bunker, pluie \\
+6 & \`{E}re Futuriste    & $\times 3.0$ & Station spatiale, n\'{e}ons, hologrammes \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Transitions entre \'{e}poques}
+
+Les transitions sont g\'{e}r\'{e}es par la classe \texttt{EpochTransition} dans \texttt{main.py} : un fondu noir progressif accompagn\'{e} du nom de l'\'{e}poque en grand texte color\'{e}. La progression des stats du joueur (PV, stamina, kills, coins) est conserv\'{e}e entre les \'{e}poques.
+
+% ─────────────────────────────────────────────────────────────
+\section{M\'{e}caniques de jeu}
+
+\subsection{D\'{e}placements du joueur}
+
+Le joueur se d\'{e}place au clavier (ZQSD) et vise \`{a} la souris. Un syst\`{e}me de \textbf{dash} (touche ESPACE) permet une esquive rapide avec cooldown (\texttt{DASH\_COOLDOWN = 30} frames) et co\^{u}t en stamina (\texttt{DASH\_STAMINA\_COST = 15}). La vitesse de base est modul\'{e}e par la classe choisie.
+
+\subsection{Syst\`{e}me d'armes}
+
+Les armes sont d\'{e}finies dans \texttt{WEAPONS\_DATA} et instanci\'{e}es via la classe \texttt{Weapon}. Chaque arme poss\`{e}de :
+\begin{itemize}[noitemsep]
+  \item Un type (\texttt{ranged} ou \texttt{melee})
+  \item Des d\'{e}g\^{a}ts (\texttt{damage}), un cooldown (\texttt{cooldown\_max}) et un co\^{u}t en stamina
+  \item Pour les armes \`{a} distance : vitesse de projectile (\texttt{projectile\_speed})
+  \item Pour la m\^{e}l\'{e}e : port\'{e}e d'arc d'attaque (\texttt{melee\_range})
+\end{itemize}
+
+Les projectiles joueur (\texttt{Bullet}) h\'{e}ritent du sprite de l'arme, rotation\'{e} selon la direction de tir. Les attaques de m\^{e}l\'{e}e (\texttt{MeleeAttack}) g\'{e}n\`{e}rent une ellipse d'arc positionn\'{e}e dans la direction vis\'{e}e.
+
+\subsection{Classes de personnage}
+
+\begin{table}[H]
+\centering
+\caption{Classes disponibles et leurs caract\'{e}ristiques}
+\begin{tabular}{lll}
+\toprule
+\textbf{Classe} & \textbf{Stats} & \textbf{Comp\'{e}tence sp\'{e}ciale} \\
+\midrule
+Tank       & 150 PV, Vitesse $-30\%$ & Bouclier : $-50\%$ d\'{e}g\^{a}ts re\c{c}us \\
+Berserker  & 80 PV, Vitesse $+30\%$  & Rage : $\times 2$ d\'{e}g\^{a}ts pendant 5s \\
+Vampire    & Stats normales           & $+10$ PV par kill (10s) \\
+Ninja      & PV r\'{e}duits, Vitesse max & Invisibilit\'{e} br\`{e}ve \\
+Archer     & Stats normales           & Fl\`{e}che multiple \`{a} distance \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Power-ups et coffres}
+
+Les \textbf{power-ups} (classe \texttt{PowerUp}) apparaissent al\'{e}atoirement et offrent quatre types de bonus : \textit{Damage}, \textit{Speed}, \textit{Health}, \textit{Stamina}. Ils pulsent visuellement et disparaissent apr\`{e}s 600 frames s'ils ne sont pas ramass\'{e}s.
+
+Les \textbf{coffres} (classe \texttt{Chest}) contiennent une arme sp\'{e}cifique \`{a} l'\'{e}poque. Le joueur les ouvre en s'approchant (touche \texttt{E}), d\'{e}clenchant une animation d'ouverture et l'ajout de l'arme \`{a} son inventaire.
+
+% ─────────────────────────────────────────────────────────────
+\section{Fonctionnalit\'{e}s}
+
+\subsection{Menu principal \& navigation}
+
+Le menu principal (\texttt{MainMenuRenderer}) affiche le logo MOBIUS avec une animation flottante, des particules de fond et deux boutons : \textit{Jouer} et \textit{Quitter}. L'\'{e}cran de mode (\texttt{ModeSelectRenderer}) pr\'{e}sente deux grandes cartes cliquables --- \textbf{Solo} et \textbf{En ligne} --- avec effets de survol anim\'{e}s. Un slider de volume persistant (\texttt{VolumeSlider}) est pr\'{e}sent sur tous les \'{e}crans de menus.
+
+\begin{figure}[H]
+  \centering
+  % Remplacer par : \includegraphics[width=0.75\textwidth]{screenshots/menu_principal.png}
+  \fbox{\parbox{0.75\textwidth}{\centering\vspace{2.5cm}
+    \textit{[Capture d'\'{e}cran : menu principal MOBIUS]}
+  \vspace{2.5cm}}}
+  \caption{\'{E}cran titre --- Menu principal MOBIUS}
+\end{figure}
+
+\subsection{S\'{e}lection de classe}
+
+L'\'{e}cran \texttt{MenuRenderer} affiche cinq cartes de classe avec d\'{e}grad\'{e} de couleur, ic\^{o}ne, description et comp\'{e}tence sp\'{e}ciale. Un effet de surbrillance et d'\'{e}l\'{e}vation indique la carte survol\'{e}e. La s\'{e}lection se fait au clic ou via les touches \texttt{1}--\texttt{5}.
+
+\subsection{Multijoueur en ligne}
+
+D\'{e}taill\'{e} en section \ref{sec:multi}.
+
+\subsection{HUD (affichage t\^{e}te haute)}
+
+Le HUD affiche en temps r\'{e}el : barre de PV, barre de stamina, arme courante avec cooldown visuel, nom de l'\'{e}poque, num\'{e}ro de vague, compteur de kills et de pi\`{e}ces collect\'{e}es, et indicateur de comp\'{e}tence sp\'{e}ciale.
+
+\begin{figure}[H]
+  \centering
+  % Remplacer par : \includegraphics[width=0.75\textwidth]{screenshots/hud_ingame.png}
+  \fbox{\parbox{0.75\textwidth}{\centering\vspace{2.5cm}
+    \textit{[Capture d'\'{e}cran : HUD en jeu --- \`{e}re Pr\'{e}historique]}
+  \vspace{2.5cm}}}
+  \caption{HUD pendant une partie}
+\end{figure}
+
+% ─────────────────────────────────────────────────────────────
+\section{Multijoueur en ligne}
+\label{sec:multi}
+
+\subsection{Architecture r\'{e}seau}
+
+Le module \texttt{network.py} impl\'{e}mente une architecture \textbf{client-serveur autoritaire sur UDP} (port 55\,555 par d\'{e}faut). Le \textbf{HOST} est le serveur : il simule l'int\'{e}gralit\'{e} du jeu et envoie l'\'{e}tat complet au client \`{a} chaque frame. Le \textbf{CLIENT} n'effectue aucune simulation locale : il envoie ses inputs (d\'{e}placement, tir, dash\ldots) et re\c{c}oit l'\'{e}tat du jeu via le \texttt{ClientRenderer}.
+
+\subsection{Flux de connexion}
+
+\begin{enumerate}[noitemsep]
+  \item Le HOST lance le serveur UDP et attend le client (\'{e}cran \textit{En attente de P2\ldots}).
+  \item Le CLIENT saisit l'IP du host (\texttt{IPInputRenderer}) et se connecte dans un thread s\'{e}par\'{e} pour ne pas bloquer l'UI.
+  \item Une fois connect\'{e}s, chaque joueur arrive sur l'\'{e}cran de s\'{e}lection de classe.
+  \item Le HOST envoie le signal \texttt{send\_start} ; le jeu d\'{e}marre simultan\'{e}ment.
+\end{enumerate}
+
+\subsection{Synchronisation}
+
+\'{E}l\'{e}ments synchronis\'{e}s \`{a} chaque frame :
+\begin{itemize}[noitemsep]
+  \item Position et direction du joueur P2
+  \item Points de vie de P2
+  \item \'{E}tat des ennemis (position, PV)
+  \item Projectiles ennemis actifs
+  \item Transitions d'\'{e}poques et \'{e}v\'{e}nements game-over
+\end{itemize}
+
+La gestion des timeouts (8 secondes) permet de d\'{e}tecter proprement une d\'{e}connexion.
+
+\subsection{D\'{e}fis rencontr\'{e}s}
+
+L'impl\'{e}mentation r\'{e}seau a pos\'{e} plusieurs probl\`{e}mes techniques : la s\'{e}rialisation efficace de l'\'{e}tat du jeu (nombreux sprites), la gestion de la latence variable en UDP, et la synchronisation des transitions d'\'{e}poque entre les deux machines. La solution retenue --- serveur autoritaire sans pr\'{e}diction client --- privil\'{e}gie la simplicit\'{e} et la coh\'{e}rence.
+
+% ─────────────────────────────────────────────────────────────
+\section{Graphismes et environnement visuel}
+
+\subsection{D\'{e}cors par \'{e}poque}
+
+Chaque \'{e}poque dispose d'une classe h\'{e}ritant de \texttt{BaseRoom} et impl\'{e}mentant \texttt{draw\_epoch\_decoration()} :
+
+\begin{table}[H]
+\centering
+\caption{Effets visuels par \'{e}poque}
+\begin{tabular}{lll}
+\toprule
+\textbf{\'{E}poque} & \textbf{Couleur th\'{e}matique} & \textbf{Effet de d\'{e}coration} \\
+\midrule
+Pr\'{e}histoire   & Brun (139, 69, 19)     & Flammes anim\'{e}es (optionnelles) \\
+Gr\`{e}ce Antique & Or grec (200, 180, 80) & Soleil anim\'{e} (optionnel) \\
+P\'{e}riode Edo   & Rouge (180, 30, 30)    & P\'{e}tales de cerisier flottants \\
+\`{E}re Moderne   & Bleu (0, 80, 160)      & Volutes de fum\'{e}e de canon \\
+Guerre Mondiale & Vert (60, 80, 40)      & Pluie battante \\
+\`{E}re Futuriste & Cyan (0, 220, 255)     & Scan holographique + chiffres 0/1 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Syst\`{e}me de sprites et cache}
+
+Le module \texttt{graphics.py} centralise le chargement des assets via la classe \texttt{SpriteCache} (singleton) qui \'{e}vite les rechargements redondants. Le \texttt{BackgroundRenderer} g\'{e}n\`{e}re les fonds th\'{e}matiques par \'{e}poque. Les \texttt{ScreenEffects} g\`{e}rent les flashs d'impact, les fades et les effets de transition.
+
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}[b]{0.47\textwidth}
+    \fbox{\parbox{\textwidth}{\centering\vspace{2cm}
+      \textit{[Capture : \`{e}re Edo --- p\'{e}tales de cerisier]}
+    \vspace{2cm}}}
+    \caption{\`{E}re Edo}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.47\textwidth}
+    \fbox{\parbox{\textwidth}{\centering\vspace{2cm}
+      \textit{[Capture : \`{e}re Futuriste --- scan holographique]}
+    \vspace{2cm}}}
+    \caption{\`{E}re Futuriste}
+  \end{subfigure}
+  \caption{Exemples de d\'{e}corations d'\'{e}poque}
+\end{figure}
+
+% ─────────────────────────────────────────────────────────────
+\section{Architecture du code}
+
+\subsection{Structure modulaire}
+
+\begin{verbatim}
+mobius/
+├── main.py               # Orchestrateur, états, menus, boucle principale
+├── core/
+│   ├── constants.py      # Couleurs, données armes, skills, epochs
+│   ├── graphics.py       # SpriteCache, BackgroundRenderer, ScreenEffects
+│   ├── mechanics.py      # Weapon, Bullet, MeleeAttack, PowerUp, Chest
+│   ├── base_room.py      # Classe mère de toutes les salles
+│   └── network.py        # GameServer, GameClient, ClientRenderer
+└── epoques/
+    ├── prehistoire.py    # Salle ère Préhistorique
+    ├── grece.py          # Salle Grèce Antique
+    ├── edo.py            # Salle Période Edo
+    ├── moderne.py        # Salle Ère Moderne
+    ├── contemporain.py   # Salle Guerre Mondiale
+    └── futuristique.py   # Salle Ère Futuriste
+\end{verbatim}
+
+\subsection{Machine \`{a} \'{e}tats}
+
+La classe \texttt{Game} g\`{e}re l'\'{e}tat global du jeu via des constantes enti\`{e}res :
+
+\begin{table}[H]
+\centering
+\caption{\'{E}tats du jeu et transitions}
+\begin{tabular}{lll}
+\toprule
+\textbf{\'{E}tat} & \textbf{Description} & \textbf{Transition vers} \\
+\midrule
+\texttt{MAIN\_MENU}        & \'{E}cran titre            & \texttt{MODE\_SELECT} \\
+\texttt{MODE\_SELECT}      & Solo ou En ligne       & \texttt{CHARACTER\_SELECT} / \texttt{ONLINE\_MENU} \\
+\texttt{ONLINE\_MENU}      & H\'{e}berger / Rejoindre   & \texttt{WAITING\_CLIENT} / \texttt{IP\_INPUT} \\
+\texttt{CHARACTER\_SELECT} & Choix de classe        & \texttt{PLAYING} \\
+\texttt{PLAYING}           & Jeu en cours           & \texttt{GAME\_OVER} \\
+\texttt{GAME\_OVER}        & Fin de partie          & \texttt{MAIN\_MENU} / \texttt{PLAYING} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Extrait de code repr\'{e}sentatif}
+
+\begin{lstlisting}[caption=M\'{e}thode change\_epoch() dans main.py --- transition d'\'{e}poque avec persistance des stats]
+def change_epoch(self, next_epoch: str | None):
+    if next_epoch and next_epoch in self.rooms:
+        p = self.current_room.player
+        stats = {"skill": p.skill, "kills": p.kills,
+                 "coins": p.coins, "health": p.health,
+                 "max_health": p.max_health}
+        def _do():
+            self.current_epoch = next_epoch
+            self.current_room  = self.rooms[next_epoch]
+            self.current_room.start(
+                stats["skill"], mode=self.net_mode,
+                player_stats=stats, server=self.server)
+            if self.server:
+                self.server.send_start(stats["skill"])
+        self.transition.start(next_epoch, _do)
+    else:
+        self.game_state = GAME_OVER
+\end{lstlisting}
+
+% ============================================================
+\chapter{Bilan de l'avancement}
+
+\section{Ce qui a \'{e}t\'{e} r\'{e}alis\'{e}}
+
+L'ensemble des fonctionnalit\'{e}s pr\'{e}vues en priorit\'{e} haute a \'{e}t\'{e} livr\'{e} :
+
+\begin{itemize}
+  \item[$\checkmark$] Six \'{e}poques jouables avec d\'{e}cors distincts, ennemis et armes th\'{e}matiques
+  \item[$\checkmark$] Cinq classes de personnage avec comp\'{e}tences sp\'{e}ciales
+  \item[$\checkmark$] Syst\`{e}me d'armes complet (distanciel, m\^{e}l\'{e}e, projectiles ennemis)
+  \item[$\checkmark$] Coffres et power-ups avec animations
+  \item[$\checkmark$] Menus anim\'{e}s complets (titre, mode, classe, game over)
+  \item[$\checkmark$] Transitions d'\'{e}poques avec fondu et texte anim\'{e}
+  \item[$\checkmark$] Mode solo pleinement fonctionnel
+  \item[$\checkmark$] Module r\'{e}seau UDP avec architecture client-serveur
+  \item[$\checkmark$] HUD complet (PV, stamina, arme, vague, kills, coins)
+  \item[$\checkmark$] Logo et identit\'{e} visuelle M3G\_STUDIO (pixel-art cyan/violet)
+  \item[$\checkmark$] Site web M3G\_STUDIO (Emile Levast)
+\end{itemize}
+
+\section{Difficult\'{e}s et ajustements}
+
+\begin{itemize}
+  \item \textbf{Flammes pr\'{e}historiques et soleil grec} : ces effets ont \'{e}t\'{e} d\'{e}sactiv\'{e}s pour raisons de performance. Ils restent comment\'{e}s dans le code et sont r\'{e}activables facilement.
+  \item \textbf{Synchronisation r\'{e}seau compl\`{e}te} : le rendu client est fonctionnel mais certains effets de particules ne sont pas transmis. La synchronisation des sons reste partielle.
+  \item \textbf{Mode LAN vs Internet} : le multijoueur fonctionne de fa\c{c}on fiable en r\'{e}seau local. Sur Internet, l'ouverture du port UDP 55\,555 reste n\'{e}cessaire c\^{o}t\'{e} h\^{o}te.
+\end{itemize}
+
+\section{\'{E}carts pr\'{e}visionnel / r\'{e}el}
+
+\begin{table}[H]
+\centering
+\caption{Comparaison pr\'{e}visionnel vs r\'{e}alis\'{e}}
+\begin{tabularx}{\textwidth}{|X|c|c|}
+\hline
+\textbf{Fonctionnalit\'{e}} & \textbf{Pr\'{e}vu} & \textbf{R\'{e}alis\'{e}} \\
+\hline
+6 \'{e}poques jouables              & Oui & \textcolor{okgreen}{Oui} \\
+\hline
+5 classes joueur                & Oui & \textcolor{okgreen}{Oui} \\
+\hline
+Mode solo                       & Oui & \textcolor{okgreen}{Oui} \\
+\hline
+Mode multijoueur LAN            & Oui & \textcolor{okgreen}{Oui} \\
+\hline
+Mode multijoueur Internet       & Oui & \textcolor{warnorange}{Partiel (port forwarding requis)} \\
+\hline
+Effets d\'{e}cor toutes \'{e}poques    & Oui & \textcolor{warnorange}{4/6 actifs (Pr\'{e}histoire/Gr\`{e}ce d\'{e}sactiv\'{e}s)} \\
+\hline
+Site web M3G\_STUDIO            & Oui & \textcolor{okgreen}{Oui} \\
+\hline
+Sons / Musique                  & Bonus & \textcolor{warnorange}{Partiellement int\'{e}gr\'{e}} \\
+\hline
+\end{tabularx}
+\end{table}
+
+% ============================================================
+\chapter{Communication}
+
+\section{Site web M3G\_STUDIO}
+
+Le site web de M3G\_STUDIO a \'{e}t\'{e} r\'{e}alis\'{e} par Emile Levast. Il pr\'{e}sente le studio, le jeu MOBIUS, les membres de l'\'{e}quipe, et propose un lien de t\'{e}l\'{e}chargement du jeu. Le site refl\`{e}te l'identit\'{e} visuelle cyan/violet de MOBIUS et inclut des pages d\'{e}di\'{e}es au lore des six \'{e}poques et aux contr\^{o}les du jeu.
+
+\begin{figure}[H]
+  \centering
+  % Remplacer par : \includegraphics[width=0.75\textwidth]{screenshots/site_web.png}
+  \fbox{\parbox{0.75\textwidth}{\centering\vspace{2.5cm}
+    \textit{[Capture d'\'{e}cran : page d'accueil du site M3G\_STUDIO]}
+  \vspace{2.5cm}}}
+  \caption{Site web M3G\_STUDIO}
+\end{figure}
+
+\section{Logo et identit\'{e} visuelle}
+
+Le logo MOBIUS a \'{e}t\'{e} con\c{c}u en pixel-art avec un d\'{e}grad\'{e} cyan vers bleu profond, agr\'{e}ment\'{e} d'un effet de foudre rose en bas. Ce logo est utilis\'{e} de fa\c{c}on coh\'{e}rente sur l'\'{e}cran titre, dans tous les menus, sur le site web et dans les documents du projet.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.45\textwidth]{mobius_logo_final.png}
+  \caption{Logo officiel MOBIUS --- M3G\_STUDIO}
+\end{figure}
+
+\section{Manuel d'utilisation}
+
+Les contr\^{o}les du jeu sont affich\'{e}s directement dans l'interface de s\'{e}lection de mode, garantissant que le joueur est inform\'{e} avant de commencer.
+
+\begin{table}[H]
+\centering
+\caption{Contr\^{o}les du jeu}
+\begin{tabular}{ll}
+\toprule
+\textbf{Touche} & \textbf{Action} \\
+\midrule
+\texttt{ZQSD}        & D\'{e}placement \\
+\texttt{Clic gauche} & Tirer / Attaquer \\
+\texttt{ESPACE}      & Dash (esquive) \\
+\texttt{F}           & Comp\'{e}tence sp\'{e}ciale \\
+\texttt{E}           & Ouvrir un coffre \\
+\texttt{1 / 2}       & Changer d'arme \\
+\texttt{ESC}         & Menu pause / Retour \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ============================================================
+\chapter{Conclusion}
+
+Le d\'{e}veloppement de MOBIUS Roguelike a repr\'{e}sent\'{e} pour M3G\_STUDIO bien plus qu'un exercice acad\'{e}mique. En partant de z\'{e}ro pour concevoir un jeu complet --- architecture modulaire, graphismes th\'{e}matiques, syst\`{e}me de classes, et multijoueur en ligne --- nous avons collectivement franchi un cap significatif dans notre ma\^{i}trise de Python et de la conception logicielle.
+
+Le r\'{e}sultat est un jeu jouable, coh\'{e}rent visuellement et narrativement, avec une rejouabilit\'{e} port\'{e}e par les six univers distincts et les cinq classes. Le module r\'{e}seau UDP, d\'{e}velopp\'{e} sans framework, constitue techniquement la partie la plus ambitieuse du projet.
+
+Ce que ce projet nous a appris d\'{e}passe le code : planification r\'{e}aliste, communication r\'{e}guli\`{e}re, gestion des impr\'{e}vus, et fiert\'{e} collective d'un livrable abouti. Ces comp\'{e}tences nous accompagneront bien au-del\`{a} de la promo 2027.
+
+\vspace{1cm}
+\begin{center}
+  \textcolor{mobiuspurple}{\large\bfseries M3G\_STUDIO --- MOBIUS Roguelike --- EPITA 2025}\\[4pt]
+  \textcolor{mobiuscyan}{\textit{``Every loop ends. Until it doesn't.''}}
+\end{center}
+
+% ============================================================
+%  ANNEXES
+% ============================================================
+\appendix
+\chapter{Annexes illustr\'{e}es}
+
+\textit{%
+  Cette section est r\'{e}serv\'{e}e aux captures d'\'{e}cran et illustrations du jeu.
+  Pour int\'{e}grer une image, remplacer le bloc \texttt{\textbackslash fbox} par :\\
+  \texttt{\textbackslash includegraphics[width=0.8\textbackslash textwidth]\{screenshots/nom\_image.png\}}
+}
+
+\section{Menus}
+
+\begin{figure}[H]
+  \centering
+  % \includegraphics[width=0.8\textwidth]{screenshots/menu_principal.png}
+  \fbox{\parbox{0.8\textwidth}{\centering\vspace{3cm}
+    \textit{[Illustration A1 : \'{E}cran titre MOBIUS]}
+  \vspace{3cm}}}
+  \caption{Annexe A1 --- Menu principal}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  % \includegraphics[width=0.8\textwidth]{screenshots/mode_select.png}
+  \fbox{\parbox{0.8\textwidth}{\centering\vspace{3cm}
+    \textit{[Illustration A2 : S\'{e}lection de mode Solo / En ligne]}
+  \vspace{3cm}}}
+  \caption{Annexe A2 --- S\'{e}lection de mode}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  % \includegraphics[width=0.8\textwidth]{screenshots/class_select.png}
+  \fbox{\parbox{0.8\textwidth}{\centering\vspace{3cm}
+    \textit{[Illustration A3 : S\'{e}lection de classe (5 cartes)]}
+  \vspace{3cm}}}
+  \caption{Annexe A3 --- S\'{e}lection de classe}
+\end{figure}
+
+\section{Gameplay --- \'{E}poques}
+
+\begin{figure}[H]
+  \centering
+  % \includegraphics[width=0.8\textwidth]{screenshots/prehistoire.png}
+  \fbox{\parbox{0.8\textwidth}{\centering\vspace{3cm}
+    \textit{[Illustration B1 : Gameplay --- \`{E}re Pr\'{e}historique]}
+  \vspace{3cm}}}
+  \caption{Annexe B1 --- \`{E}re Pr\'{e}historique}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  % \includegraphics[width=0.8\textwidth]{screenshots/edo.png}
+  \fbox{\parbox{0.8\textwidth}{\centering\vspace{3cm}
+    \textit{[Illustration B2 : Gameplay --- P\'{e}riode Edo (p\'{e}tales de cerisier)]}
+  \vspace{3cm}}}
+  \caption{Annexe B2 --- P\'{e}riode Edo}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  % \includegraphics[width=0.8\textwidth]{screenshots/futuristique.png}
+  \fbox{\parbox{0.8\textwidth}{\centering\vspace{3cm}
+    \textit{[Illustration B3 : Gameplay --- \`{E}re Futuriste (scan holographique)]}
+  \vspace{3cm}}}
+  \caption{Annexe B3 --- \`{E}re Futuriste}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  % \includegraphics[width=0.8\textwidth]{screenshots/ww2.png}
+  \fbox{\parbox{0.8\textwidth}{\centering\vspace{3cm}
+    \textit{[Illustration B4 : Gameplay --- Guerre Mondiale (pluie)]}
+  \vspace{3cm}}}
+  \caption{Annexe B4 --- Guerre Mondiale}
+\end{figure}
+
+\section{Multijoueur}
+
+\begin{figure}[H]
+  \centering
+  % \includegraphics[width=0.8\textwidth]{screenshots/waiting_p2.png}
+  \fbox{\parbox{0.8\textwidth}{\centering\vspace{3cm}
+    \textit{[Illustration C1 : \'{E}cran En attente de P2 (host)]}
+  \vspace{3cm}}}
+  \caption{Annexe C1 --- Attente multijoueur (host)}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  % \includegraphics[width=0.8\textwidth]{screenshots/coop.png}
+  \fbox{\parbox{0.8\textwidth}{\centering\vspace{3cm}
+    \textit{[Illustration C2 : Gameplay co-op 2 joueurs en ligne]}
+  \vspace{3cm}}}
+  \caption{Annexe C2 --- Partie co-op en ligne}
+\end{figure}
+
+\section{Communication \& planification}
+
+\begin{figure}[H]
+  \centering
+  % \includegraphics[width=0.8\textwidth]{screenshots/site_web_full.png}
+  \fbox{\parbox{0.8\textwidth}{\centering\vspace{3cm}
+    \textit{[Illustration D1 : Site web M3G\_STUDIO]}
+  \vspace{3cm}}}
+  \caption{Annexe D1 --- Site web M3G\_STUDIO}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  % \includegraphics[width=0.8\textwidth]{screenshots/gantt.png}
+  \fbox{\parbox{0.8\textwidth}{\centering\vspace{3cm}
+    \textit{[Illustration D2 : Diagramme de Gantt du projet]}
+  \vspace{3cm}}}
+  \caption{Annexe D2 --- Planification (Diagramme de Gantt)}
+\end{figure}
+
+\end{document}
