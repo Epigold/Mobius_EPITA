@@ -55,10 +55,11 @@ class Weapon:
 
 class Bullet(pygame.sprite.Sprite):
     def __init__(self, x, y, target_x, target_y, weapon: Weapon,
-                 damage_mult=1.0, epoch_key="prehistoire"):
+                 damage_mult=1.0, epoch_key="prehistoire", owner=None):
         super().__init__()
         self.damage = int(weapon.damage * damage_mult)
         self.epoch  = epoch_key
+        self.owner  = owner
 
         # Sprite : copie du sprite de l'arme (redimensionné)
         base = weapon.image
@@ -97,11 +98,12 @@ class Bullet(pygame.sprite.Sprite):
 # ══════════════════════════════════════════════════════════════════════════════
 
 class MeleeAttack(pygame.sprite.Sprite):
-    def __init__(self, x, y, target_x, target_y, weapon: Weapon, damage_mult=1.0):
+    def __init__(self, x, y, target_x, target_y, weapon: Weapon, damage_mult=1.0, owner=None):
         super().__init__()
         self.damage   = int(weapon.damage * damage_mult)
         self.duration = 14
         self.hit_enemies: set = set()
+        self.owner = owner
 
         dx = target_x - x
         dy = target_y - y

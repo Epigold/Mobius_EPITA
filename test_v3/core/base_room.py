@@ -67,6 +67,10 @@ class Player(pygame.sprite.Sprite):
         # ── Animation ─────────────────────────────────────────────────────────
         self._anim_cache = {}; self._anim_state = "idle"
         self._anim_frame = 0; self._anim_timer = 0; self._anim_speed = 8
+        self._moving = False
+        self._visual_bob = 0.0
+        self._visual_tilt = 0.0
+        self._stride_phase = 0.0
         self._load_sprites()
         self.image = self._get_frame()
         self.rect  = self.image.get_rect()
@@ -86,6 +90,7 @@ class Player(pygame.sprite.Sprite):
         self._net_fire_tx = 0       # Coordonnée X cible du tir
         self._net_fire_ty = 0       # Coordonnée Y cible du tir
         self._net_chest   = False   # Interaction coffre demandée
+        self._network_controlled = False
 
     # ── Sprites ───────────────────────────────────────────────────────────────
     def _load_sprites(self):
@@ -146,6 +151,9 @@ class Player(pygame.sprite.Sprite):
             self.dir_x = dx / dist
             self.dir_y = dy / dist
             self.facing_right = dx >= 0   # Orient selon la direction de déplacement
+        else:
+            self.dir_x = 0
+            self.dir_y = 0
 
         # Actions discrètes → flags consommés dans _handle_move_network()
         if inputs.get('dash'):  self._net_dash  = True
@@ -176,12 +184,14 @@ class Player(pygame.sprite.Sprite):
     def _handle_move_network(self):
         """Déplace P2 selon les flags réseau (pas le clavier)."""
         if self.dashing:
+            self._moving = True
             self.rect.x += self.dir_x * DASH_SPEED
             self.rect.y += self.dir_y * DASH_SPEED
             self.dash_time -= 1
             if self.dash_time <= 0: self.dashing = False
         else:
             moving = (self.dir_x != 0 or self.dir_y != 0)
+            self._moving = moving
             eff = self.speed * self.speed_boost
             if moving:
                 self.rect.x += self.dir_x * eff
@@ -204,6 +214,7 @@ class Player(pygame.sprite.Sprite):
         self.facing_right = mx >= self.rect.centerx
 
         if self.dashing:
+            self._moving = True
             self.rect.x += self.dir_x * DASH_SPEED
             self.rect.y += self.dir_y * DASH_SPEED
             self.dash_time -= 1
@@ -217,6 +228,10 @@ class Player(pygame.sprite.Sprite):
             if dx or dy:
                 norm = math.hypot(dx,dy) or 1
                 self.dir_x, self.dir_y = dx/norm, dy/norm
+            else:
+                self.dir_x = 0
+                self.dir_y = 0
+            self._moving = bool(dx or dy)
             eff = self.speed * self.speed_boost
             self.rect.x += self.dir_x*eff if (dx or dy) else 0
             self.rect.y += self.dir_y*eff if (dx or dy) else 0
@@ -243,7 +258,20 @@ class Player(pygame.sprite.Sprite):
             if self.boost_timer == 0: self.damage_boost = self.speed_boost = 1.0
 
     def _update_anim(self):
+        move_strength = math.hypot(self.dir_x, self.dir_y) if self._moving else 0.0
+        if self.dashing:
+            move_strength = 1.35
+        if self._moving:
+            self._stride_phase += 0.28 * max(0.8, move_strength)
+            self._visual_bob = math.sin(self._stride_phase) * (4.0 if self.dashing else 2.4)
+            target_tilt = max(-9.0, min(9.0, self.dir_x * (10.0 if self.dashing else 6.0)))
+            self._visual_tilt += (target_tilt - self._visual_tilt) * 0.35
+        else:
+            self._stride_phase += 0.06
+            self._visual_bob *= 0.72
+            self._visual_tilt *= 0.68
         self._anim_timer += 1
+        self._anim_speed = 5 if self.dashing else (6 if self._moving else 12)
         if self._anim_timer >= self._anim_speed:
             self._anim_timer = 0
             frames = self._anim_cache.get(self._anim_state, self._anim_cache["idle"])
@@ -258,13 +286,13 @@ class Player(pygame.sprite.Sprite):
         self.current_weapon.use()
         dmult = self.damage_boost
         if self.current_weapon.type == "ranged":
-            b = Bullet(self.rect.centerx,self.rect.centery,mx,my,self.current_weapon,dmult)
-            if self._bullets:     self._bullets.add(b)
-            if self._all_sprites: self._all_sprites.add(b)
+            b = Bullet(self.rect.centerx,self.rect.centery,mx,my,self.current_weapon,dmult,owner=self)
+            if self._bullets is not None:     self._bullets.add(b)
+            if self._all_sprites is not None: self._all_sprites.add(b)
         else:
-            m = MeleeAttack(self.rect.centerx,self.rect.centery,mx,my,self.current_weapon,dmult)
-            if self._melee_attacks: self._melee_attacks.add(m)
-            if self._all_sprites:   self._all_sprites.add(m)
+            m = MeleeAttack(self.rect.centerx,self.rect.centery,mx,my,self.current_weapon,dmult,owner=self)
+            if self._melee_attacks is not None: self._melee_attacks.add(m)
+            if self._all_sprites is not None:   self._all_sprites.add(m)
         return True
 
     # ── Compétence ────────────────────────────────────────────────────────────
@@ -279,14 +307,23 @@ class Player(pygame.sprite.Sprite):
             self.skill_active=True; self.skill_duration=600; self.skill_cooldown=900
         elif self.skill == "ninja":
             # P1 : téléportation souris · P2 réseau : téléportation en avant
-            mx,my = pygame.mouse.get_pos()
+            if self._network_controlled:
+                dist = 180
+                dx = self.dir_x if self.dir_x != 0 else (1 if self.facing_right else -1)
+                dy = self.dir_y
+                mx = self.rect.centerx + dx * dist
+                my = self.rect.centery + dy * dist
+            else:
+                mx,my = pygame.mouse.get_pos()
             self.rect.center=(mx,my); self.hitbox.center=self.rect.center
+            self.rect.clamp_ip(pygame.Rect(0,0,SCREEN_WIDTH,SCREEN_HEIGHT))
+            self.hitbox.center=self.rect.center
             self.skill_cooldown=600
-        elif self.skill == "mage" and self._bullets and self._all_sprites:
+        elif self.skill == "mage" and self._bullets is not None and self._all_sprites is not None:
             for deg in range(0,360,30):
                 rad=math.radians(deg)
                 tx=self.rect.centerx+math.cos(rad)*500; ty=self.rect.centery+math.sin(rad)*500
-                b=Bullet(self.rect.centerx,self.rect.centery,tx,ty,self.current_weapon,1.5)
+                b=Bullet(self.rect.centerx,self.rect.centery,tx,ty,self.current_weapon,1.5,owner=self)
                 self._bullets.add(b); self._all_sprites.add(b)
             self.skill_cooldown=1200
         return True
@@ -515,6 +552,9 @@ class BaseRoom:
         self.wave=0; self.wave_complete=False; self.boss_wave=False
         self.boss_spawned=False; self.enemies_this_wave=0; self.enemies_spawned=0
         self.spawn_timer=0; self.next_wave_timer=0; self.show_chest_hint=False
+        self._network_game_over=False; self._network_next_epoch=None
+        self._boss_chest_opened=False
+        self.objective_hint=""
 
         self.player=None; self.player2=None
         self.mode="solo"; self._running=False
@@ -530,6 +570,10 @@ class BaseRoom:
         player2_stats: dict → stats P2 à restaurer
         """
         self.mode=mode
+        self._network_game_over=False
+        self._network_next_epoch=None
+        self._boss_chest_opened=False
+        self.objective_hint=""
         for grp in [self.all_sprites,self.enemies,self.bullets,
                     self.enemy_bullets,self.melee_attacks,self.chests,self.powerups]:
             grp.empty()
@@ -549,6 +593,7 @@ class BaseRoom:
         if mode=="server" and skill2:
             p2_pos=(SCREEN_WIDTH*2//3,SCREEN_HEIGHT//2)
             self.player2=Player(skill2,start_pos=p2_pos)
+            self.player2._network_controlled = True
             if player2_stats: self._restore_stats(self.player2,player2_stats)
             self.player2._bullets=self.bullets; self.player2._melee_attacks=self.melee_attacks
             self.player2._all_sprites=self.all_sprites
@@ -633,7 +678,8 @@ class BaseRoom:
             'epoch':self.epoch_key,'wave':self.wave,
             'wave_complete':self.wave_complete,'boss_wave':self.boss_wave,
             'enemies_left':len(self.enemies),'show_chest_hint':self.show_chest_hint,
-            'game_over':False,'next_epoch':None,
+            'objective_hint':self.objective_hint,
+            'game_over':self._network_game_over,'next_epoch':self._network_next_epoch,
             'p1':sp(self.player) if self.player else None,
             'p2':sp(self.player2) if self.player2 else None,
             'enemies':[se(e) for e in self.enemies],
@@ -674,9 +720,15 @@ class BaseRoom:
         Simulation principale (une frame). Appelée par Game.run().
         En mode server : apply_p2_network_inputs() doit avoir été appelé AVANT.
         """
+        self._network_game_over=False
+        self._network_next_epoch=None
+        self.objective_hint=""
+
         p1_dead=self.player.health<=0
         p2_dead=(self.player2 is None) or (self.player2.health<=0)
-        if p1_dead and p2_dead: return True
+        if p1_dead and p2_dead:
+            self._network_game_over=True
+            return True
 
         keys=pygame.key.get_pressed()
         # Mettre à jour P1 (local)
@@ -734,7 +786,8 @@ class BaseRoom:
                         col = EPOCHS.get(self.epoch_key, {}).get("enemy_tint", RED)
                         self.particles.emit_death(enemy.rect.centerx, enemy.rect.centery, col)
                         self._spawn_powerup(enemy.rect.centerx, enemy.rect.centery)
-                        self.player.add_kill()
+                        owner = bullet.owner if getattr(bullet, "owner", None) else self.player
+                        owner.add_kill()
                         enemy.kill()
                     break   # Un bullet ne touche qu'un seul ennemi
                 if bullet_killed:
@@ -756,7 +809,8 @@ class BaseRoom:
                         col = EPOCHS.get(self.epoch_key, {}).get("enemy_tint", RED)
                         self.particles.emit_death(enemy.rect.centerx, enemy.rect.centery, col)
                         self._spawn_powerup(enemy.rect.centerx, enemy.rect.centery)
-                        self.player.add_kill()
+                        owner = melee.owner if getattr(melee, "owner", None) else self.player
+                        owner.add_kill()
                         enemy.kill()
 
         # Balles ennemies → P1
@@ -803,14 +857,29 @@ class BaseRoom:
                     if self.player2: self.player2.coins+=10
                     self.on_exit()
         else:
-            self.next_wave_timer+=1
             def near(p): return p and any(c.check_interaction(p.rect) and not c.opened for c in self.chests)
-            self.show_chest_hint=near(self.player) or near(self.player2)
-            if self.next_wave_timer>=220:
-                if self.boss_wave:
-                    next_epoch=EPOCHS.get(self.epoch_key,{}).get("next",None)
-                    return f"NEXT_EPOCH:{next_epoch}" if next_epoch else "NEXT_EPOCH:None"
-                self._start_new_wave()
+            if self.boss_wave:
+                all_chests_opened = bool(self.chests) and all(c.opened for c in self.chests)
+                players_near = near(self.player) or near(self.player2)
+                self.show_chest_hint = players_near or (bool(self.chests) and not all_chests_opened) or self._boss_chest_opened
+                if all_chests_opened:
+                    if not self._boss_chest_opened:
+                        self._boss_chest_opened = True
+                        self.next_wave_timer = 0
+                    self.objective_hint = "Passage temporel imminent..."
+                    self.next_wave_timer += 1
+                    if self.next_wave_timer >= 90:
+                        next_epoch=EPOCHS.get(self.epoch_key,{}).get("next",None)
+                        self._network_next_epoch=next_epoch
+                        return f"NEXT_EPOCH:{next_epoch}" if next_epoch else "NEXT_EPOCH:None"
+                else:
+                    self.next_wave_timer = 0
+                    self.objective_hint = "E : Ouvrir le coffre" if players_near else "Approchez-vous du coffre de fin d'epoque"
+            else:
+                self.next_wave_timer+=1
+                self.show_chest_hint=False
+                if self.next_wave_timer>=160:
+                    self._start_new_wave()
         return None
 
     # ── Draw ──────────────────────────────────────────────────────────────────
@@ -819,17 +888,17 @@ class BaseRoom:
         ox,oy=self.screen_fx.offset
         bg=self.bg_renderer.get(self.epoch_key); surface.blit(bg,(ox,oy))
         for sprite in self.all_sprites:
+            if sprite is self.player or sprite is self.player2:
+                continue
             surface.blit(sprite.image,(sprite.rect.x+ox,sprite.rect.y+oy))
         if self.player:
-            pr=self.player.rect.move(ox,oy)
-            draw_weapon_in_hand(surface,pr,self.player.current_weapon,self.player.facing_right)
+            self._draw_player(surface, self.player, ox, oy)
         # Arme P2 réseau (visible côté host)
         if self.mode=="server" and self.player2 and self.player2.health>0:
-            pr2=self.player2.rect.move(ox,oy)
-            draw_weapon_in_hand(surface,pr2,self.player2.current_weapon,self.player2.facing_right)
+            pr2=self._draw_player(surface, self.player2, ox, oy)
             font_lbl=pygame.font.Font(None,22)
             lbl=font_lbl.render("P2",True,(120,200,255))
-            surface.blit(lbl,(pr2.centerx-lbl.get_width()//2,pr2.top-18+oy))
+            surface.blit(lbl,(pr2.centerx-lbl.get_width()//2,pr2.top-18))
         for enemy in self.enemies:
             r=enemy.rect.move(ox,oy)
             draw_enemy_health_bar(surface,r,enemy.health,enemy.max_health,
@@ -842,7 +911,9 @@ class BaseRoom:
             self._draw_p2_hud(surface)
         self.draw_epoch_decoration(surface)
         if self.show_chest_hint:
-            font=pygame.font.Font(None,32); hint=font.render("E : Ouvrir le coffre",True,GOLD)
+            font=pygame.font.Font(None,32)
+            hint_text = self.objective_hint or "E : Ouvrir le coffre"
+            hint=font.render(hint_text,True,GOLD)
             hr=hint.get_rect(center=(SCREEN_WIDTH//2,SCREEN_HEIGHT-80))
             bg_s=pygame.Surface((hr.w+20,hr.h+10),pygame.SRCALPHA); bg_s.fill((0,0,0,160))
             surface.blit(bg_s,(hr.x-10,hr.y-5)); surface.blit(hint,hr)
@@ -867,3 +938,19 @@ class BaseRoom:
         pygame.draw.rect(surface,(int(220*(1-hp_r)),int(220*hp_r),60),(bx,by,int(bw*hp_r),12),border_radius=3)
         pygame.draw.rect(surface,WHITE,(bx,by,bw,12),1,border_radius=3)
         surface.blit(font.render(f"HP {int(p2.health)}/{p2.max_health}",True,WHITE),(bx,by+14))
+
+    def _draw_player(self, surface, player, ox, oy):
+        pr = player.rect.move(ox, oy)
+        shadow_w = max(26, int(player.rect.width * (0.48 if player._moving else 0.42)))
+        shadow_h = 13 if player._moving else 11
+        shadow = pygame.Surface((shadow_w * 2, shadow_h * 2), pygame.SRCALPHA)
+        pygame.draw.ellipse(shadow, (0, 0, 0, 85), shadow.get_rect())
+        surface.blit(shadow, (pr.centerx - shadow.get_width() // 2, pr.bottom - shadow_h))
+
+        img = player.image
+        if abs(player._visual_tilt) > 0.15:
+            img = pygame.transform.rotate(img, player._visual_tilt)
+        draw_rect = img.get_rect(center=(pr.centerx, pr.centery + int(player._visual_bob)))
+        surface.blit(img, draw_rect)
+        draw_weapon_in_hand(surface, draw_rect, player.current_weapon, player.facing_right)
+        return draw_rect

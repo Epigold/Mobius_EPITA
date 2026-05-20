@@ -602,7 +602,7 @@ class ClientRenderer:
         # ── 11. Hint coffre ───────────────────────────────────────────────────
         if state.get('show_chest_hint'):
             font = pygame.font.Font(None, 32)
-            hint = font.render("E : Ouvrir le coffre", True, GOLD)
+            hint = font.render(state.get('objective_hint', "E : Ouvrir le coffre"), True, GOLD)
             hr = hint.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 80))
             bg_s = pygame.Surface((hr.w+20, hr.h+10), pygame.SRCALPHA)
             bg_s.fill((0,0,0,160))

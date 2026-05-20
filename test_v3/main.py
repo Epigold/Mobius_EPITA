@@ -937,9 +937,7 @@ class Game:
         elif self.net_mode == "host":
             # ── Host : démarrer le serveur et la simulation ────────────────────
             p2_skill = self.server.p2_skill if self.server else "tank"
-            self.current_room.start(skill, mode="server",
-                                    p2_skill=p2_skill,
-                                    server=self.server)
+            self.current_room.start(skill, mode="server", skill2=p2_skill)
             # Signaler au client que la partie commence (lui envoyer la classe P1)
             if self.server:
                 self.server.send_start(skill)
@@ -972,10 +970,11 @@ class Game:
                 self.current_epoch = next_epoch
                 self.current_room  = self.rooms[next_epoch]
                 p2_skill = p2_stats["skill"] if p2_stats else None
-                self.current_room.start(stats["skill"], mode=self.net_mode,
-                                        player_stats=stats,
-                                        p2_skill=p2_skill, p2_stats=p2_stats,
-                                        server=self.server)
+                room_mode = "server" if self.net_mode == "host" else "solo"
+                self.current_room.start(stats["skill"], player_stats=stats,
+                                        mode=room_mode,
+                                        skill2=p2_skill,
+                                        player2_stats=p2_stats)
                 if self.server:
                     self.server.send_start(stats["skill"])
             self.transition.start(next_epoch, _do)

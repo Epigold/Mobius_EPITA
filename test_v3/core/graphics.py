@@ -71,6 +71,12 @@ class SpriteCache:
         # Fallback dessiné
         surf = pygame.Surface(target_size, pygame.SRCALPHA)
         pygame.draw.ellipse(surf, fallback_color, (0, 0, *target_size))
+        pygame.draw.ellipse(surf, WHITE, (0, 0, *target_size), 2)
+        label = data.get("name", weapon_key).upper()[:3]
+        font = pygame.font.Font(None, max(12, target_size[1] // 3))
+        txt = font.render(label, True, WHITE)
+        surf.blit(txt, (target_size[0] // 2 - txt.get_width() // 2,
+                        target_size[1] // 2 - txt.get_height() // 2))
         return surf
 
     @staticmethod

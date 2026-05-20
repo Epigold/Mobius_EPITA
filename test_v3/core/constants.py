@@ -213,7 +213,7 @@ WEAPONS_DATA = {
     # ── Préhistoire ──────────────────────────────
     "rock": {
         "name":              "Caillou",
-        "sprite":            ("sprites_final", "rock.png"),
+        "sprite":            ("weapons", "caillou_dj_1.png"),
         "fallback_color":    GRAY,
         "type":              "ranged",
         "damage":            35,
@@ -224,7 +224,7 @@ WEAPONS_DATA = {
     },
     "bone": {
         "name":              "Os",
-        "sprite":            ("sprites_final", "bone.png"),
+        "sprite":            ("weapons", "os_dj_1.png"),
         "fallback_color":    (230, 210, 180),
         "type":              "melee",
         "damage":            75,
@@ -247,7 +247,7 @@ WEAPONS_DATA = {
     },
     "skull": {
         "name":              "Crâne",
-        "sprite":            ("sprites_final", "skull.png"),
+        "sprite":            ("sprites_final", "bow_draw.png"),
         "fallback_color":    (220, 200, 180),
         "type":              "ranged",
         "damage":            45,
@@ -259,7 +259,7 @@ WEAPONS_DATA = {
     # ── Edo ──────────────────────────────────────
     "katana": {
         "name":              "Katana",
-        "sprite":            ("sprites_final", "katana.png"),
+        "sprite":            ("sprites_final", "sword.png"),
         "fallback_color":    LIGHT_GRAY,
         "type":              "melee",
         "damage":            95,
@@ -270,7 +270,7 @@ WEAPONS_DATA = {
     },
     "magic_orb": {
         "name":              "Orbe Magique",
-        "sprite":            ("sprites_final", "magic_orb.png"),
+        "sprite":            ("sprites_final", "magic_hand.png"),
         "fallback_color":    TEAL,
         "type":              "ranged",
         "damage":            70,
@@ -293,7 +293,7 @@ WEAPONS_DATA = {
     },
     "dagger": {
         "name":              "Couteau",
-        "sprite":            ("sprites_final", "dagger.png"),
+        "sprite":            ("sprites_final", "sword.png"),
         "fallback_color":    LIGHT_GRAY,
         "type":              "melee",
         "damage":            60,
