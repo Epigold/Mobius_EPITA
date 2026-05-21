@@ -30,6 +30,7 @@ class Player(pygame.sprite.Sprite):
         "idle": ["char_idle_one_arm"],
         "walk": ["char_walk_one_arm"],
         "run":  ["char_run1_one_arm","char_run2_one_arm","char_run3_one_arm"],
+        "dead": ["char_dead_one_arm"],
     }
     SIZE = 80
     REVIVE_HEALTH_RATIO = 0.4
@@ -310,7 +311,7 @@ class Player(pygame.sprite.Sprite):
         self._moving = False
         self.dir_x = 0
         self.dir_y = 0
-        self._anim_state = "idle"
+        self._anim_state = "dead"
         self._visual_bob = 0.0
         self._visual_tilt = 0.0
         self._anim_frame = 0
@@ -434,6 +435,7 @@ class Enemy(pygame.sprite.Sprite):
         self.speed=cfg["speed"]; self.max_health=int(cfg["health"]*diff)
         self.health=self.max_health; self.damage=int(cfg["damage"]*diff); self.size=cfg["size"]
         self.damage_cooldown=0; self.shoot_cooldown=0
+        self._enemy_group = None
         epoch_color=EPOCHS.get(epoch_key,{}).get("enemy_tint",(180,80,80))
         self._build_sprite(sprite_path, epoch_color)
         self._spawn_on_edge()
@@ -496,6 +498,32 @@ class Enemy(pygame.sprite.Sprite):
         dx=self.player.rect.x-self.rect.x; dy=self.player.rect.y-self.rect.y
         dist=math.hypot(dx,dy) or 1
         self.rect.x+=(dx/dist)*self.speed; self.rect.y+=(dy/dist)*self.speed
+        self._apply_enemy_separation()
+
+    def _apply_enemy_separation(self):
+        if not self._enemy_group:
+            return
+        push_x = 0.0
+        push_y = 0.0
+        neighbors = 0
+        for other in self._enemy_group:
+            if other is self:
+                continue
+            dx = self.rect.centerx - other.rect.centerx
+            dy = self.rect.centery - other.rect.centery
+            dist = math.hypot(dx, dy) or 0.001
+            min_dist = (self.size + other.size) * 0.25
+            if dist >= min_dist:
+                continue
+            overlap = (min_dist - dist) / min_dist
+            push_x += (dx / dist) * overlap
+            push_y += (dy / dist) * overlap
+            neighbors += 1
+        if not neighbors:
+            return
+        sep_scale = min(2.2, 0.9 + neighbors * 0.25)
+        self.rect.x += push_x * sep_scale
+        self.rect.y += push_y * sep_scale
 
     def handle_collision(self):
         if self.damage_cooldown > 0: self.damage_cooldown -= 1; return
@@ -702,11 +730,13 @@ class BaseRoom:
         if etype=="tank":    e=TankEnemy(target,self.epoch_key)
         elif etype=="sniper": e=SniperEnemy(target,self.epoch_key,self.enemy_bullets,self.all_sprites)
         else:                 e=RusherEnemy(target,self.epoch_key)
+        e._enemy_group = self.enemies
         self.enemies.add(e); self.all_sprites.add(e)
 
     def _spawn_boss(self):
         target=[self.player,self.player2] if (self.mode=="server" and self.player2) else self.player
         b=BossEnemy(target,self.epoch_key,self.wave,self.enemy_bullets,self.all_sprites)
+        b._enemy_group = self.enemies
         self.enemies.add(b); self.all_sprites.add(b); self.boss_spawned=True
 
     def _spawn_powerup(self, x, y):
@@ -1093,10 +1123,7 @@ class BaseRoom:
             overlay = pygame.Surface(img.get_size(), pygame.SRCALPHA)
             overlay.fill(tint)
             img.blit(overlay, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
-        if player.is_downed:
-            angle = 86 if player.facing_right else -86
-            img = pygame.transform.rotate(img, angle)
-        elif abs(player._visual_tilt) > 0.15:
+        if abs(player._visual_tilt) > 0.15 and not player.is_downed:
             img = pygame.transform.rotate(img, player._visual_tilt)
         draw_rect = img.get_rect(center=(pr.centerx, pr.centery + int(player._visual_bob)))
         surface.blit(img, draw_rect)

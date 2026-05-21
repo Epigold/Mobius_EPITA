@@ -818,18 +818,24 @@ class GameOverRenderer:
             ]):
                 t = self.font_md.render(text, True, color)
                 surface.blit(t, (cx-t.get_width()//2, title_y + 140 + i*42))
-        panel = pygame.Surface((550,52), pygame.SRCALPHA)
+        panel_h = 150 if online else 104
+        panel = pygame.Surface((620, panel_h), pygame.SRCALPHA)
         panel.fill((20,20,20,160))
         pygame.draw.rect(panel, (80,80,100), panel.get_rect(), 1, border_radius=8)
-        panel_y = min(self.h - 90, title_y + 280)
-        surface.blit(panel, (cx-250, panel_y))
-        x_off = cx-220
+        panel_y = min(self.h - (188 if online else 126), title_y + 280)
+        panel_x = cx - panel.get_width() // 2
+        surface.blit(panel, (panel_x, panel_y))
         replay_label = "[R] Voter pour rejouer" if online else "[R] Rejouer"
-        for label, color in [(replay_label,WHITE),("[M] Menu",(160,200,255)),("[ESC] Quitter",(160,100,100))]:
+        control_lines = [
+            (replay_label, WHITE),
+            ("[M] Menu", (160,200,255)),
+            ("[ESC] Quitter", (160,100,100)),
+        ]
+        for i, (label, color) in enumerate(control_lines):
             t = self.font_md.render(label, True, color)
-            surface.blit(t, (x_off, panel_y + 12)); x_off += 180
+            surface.blit(t, (panel_x + 22, panel_y + 10 + i * 30))
         if online and replay_status:
-            status_y = panel_y + 68
+            status_y = panel_y + 14
             host_ok = replay_status.get("host_vote", False)
             client_ok = replay_status.get("client_vote", False)
             lines = [
@@ -839,7 +845,7 @@ class GameOverRenderer:
             ]
             for i, (text, color) in enumerate(lines):
                 t = self.font_md.render(text, True, color)
-                surface.blit(t, (cx - t.get_width()//2, status_y + i * 30))
+                surface.blit(t, (panel_x + 280, status_y + i * 30))
 
 
 # ==============================================================================
@@ -1140,6 +1146,8 @@ class Game:
                 if self.net_mode == "host" and self.server:
                     self.server.poll()
                     self._host_replay_vote, self._client_replay_vote = self.server.get_replay_votes()
+                    if self.server.connected:
+                        self.server.send_replay_status()
                     if self.server.connected and self._host_replay_vote and self._client_replay_vote:
                         self.server.send_replay_begin(self.player_skill)
                         self.start_game(self.player_skill)
@@ -1175,7 +1183,7 @@ class Game:
                     self.client.send_inputs(inputs)
                     # 3. Verifier si le serveur a signale game over ou epoch change
                     state = self.client.get_state()
-                    if state.get("game_over") or state.get("go"):
+                    if state.get("game_over") or state.get("go") or self.client.remote_game_over:
                         self.game_state = GAME_OVER
                     if self.client.is_server_timeout(8.0):
                         print("[CLIENT] Serveur deconnecte (timeout)")

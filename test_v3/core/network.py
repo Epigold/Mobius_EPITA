@@ -366,6 +366,7 @@ class GameServer:
                 'type': 'replay_status',
                 'host_vote': self.host_replay_vote,
                 'client_vote': self.client_replay_vote,
+                'game_over': True,
             }, self.client_addr)
 
     def send_replay_begin(self, p1_skill: str):
@@ -435,6 +436,7 @@ class GameClient:
         self.host_replay_vote = False
         self.client_replay_vote = False
         self.replay_begin = False
+        self.remote_game_over = False
 
         # -- Dernier etat recu -------------------------------------------------
         # Dict serialise recu du serveur, utilise pour le rendu
@@ -495,6 +497,7 @@ class GameClient:
             elif msg_type == 'replay_status':
                 self.host_replay_vote = bool(msg.get('host_vote', False))
                 self.client_replay_vote = bool(msg.get('client_vote', False))
+                self.remote_game_over = bool(msg.get('game_over', False))
 
             elif msg_type == 'replay_begin':
                 self.p1_skill = msg.get('p1_skill', self.p1_skill)
@@ -535,6 +538,7 @@ class GameClient:
         self.replay_begin = False
         self.host_replay_vote = False
         self.client_replay_vote = False
+        self.remote_game_over = False
         return True
 
     def get_state(self) -> dict:
@@ -596,8 +600,13 @@ class ClientRenderer:
 
         # Pre-charger les sprites joueurs pour le rendu
         self._player_sprites = {}
-        for state in ("idle", "run"):
-            name = "char_idle_one_arm" if state == "idle" else "char_run1_one_arm"
+        for state in ("idle", "run", "dead"):
+            if state == "idle":
+                name = "char_idle_one_arm"
+            elif state == "run":
+                name = "char_run1_one_arm"
+            else:
+                name = "char_dead_one_arm"
             try:
                 self._player_sprites[state] = self._cache.load(
                     "sprites_final", f"{name}.png", size=(80, 80))
@@ -825,10 +834,6 @@ class ClientRenderer:
             overlay = pygame.Surface(img.get_size(), pygame.SRCALPHA)
             overlay.fill(tint)
             img.blit(overlay, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
-        if pdata.get('is_downed'):
-            angle = 86 if pdata.get('facing_right', True) else -86
-            img = pygame.transform.rotate(img, angle)
-
         draw_rect = img.get_rect(center=(x, y))
         surface.blit(img, draw_rect)
         weapon_key = pdata.get('weapon')
