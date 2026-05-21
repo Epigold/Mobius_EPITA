@@ -492,6 +492,9 @@ class GameClient:
             elif msg_type == 'start':
                 self.p1_skill = msg.get('p1_skill')
                 self.started  = True
+                self._latest_frame = -1
+                with self._state_lock:
+                    self._latest_state = {}
                 print(f"[CLIENT] Partie demarree ! P1 joue : {self.p1_skill}")
 
             elif msg_type == 'replay_status':
@@ -502,6 +505,9 @@ class GameClient:
             elif msg_type == 'replay_begin':
                 self.p1_skill = msg.get('p1_skill', self.p1_skill)
                 self.replay_begin = True
+                self._latest_frame = -1
+                with self._state_lock:
+                    self._latest_state = {}
 
             # -- Etat du jeu (chaque frame du serveur) --------------------------
             elif msg_type == 'state':
