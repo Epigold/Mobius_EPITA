@@ -947,6 +947,11 @@ class Game:
         # Thread de connexion (utilisé pour connect sans bloquer l'UI)
         self._conn_thread: threading.Thread | None = None
         self._conn_error:  str = ""   # Message d'erreur de connexion
+        self._conn_success: bool = False
+        self._pending_skill: str = ""
+        self._pending_ip:   str = ""
+        self._conn_deadline: float = 0.0
+        self._local_ip_cache: str = get_local_ip()   # calculé une seule fois
 
         # ── Salles ─────────────────────────────────────────────────────────────
         self.rooms: dict = {
@@ -1089,6 +1094,17 @@ class Game:
 
             self.volume_slider.update()
 
+            # ── CONNECTING : détecter connexion réussie ────────────────────────
+            if self.game_state == CONNECTING:
+                if self.client:
+                    self.client.poll()
+                    if self.client.connected:
+                        self._conn_success = False
+                        self.start_game(self._pending_skill)
+                    elif time.time() > self._conn_deadline:
+                        self._conn_error = "ERREUR : Impossible de joindre le serveur (timeout)"
+                        self.game_state = IP_INPUT
+
             # ── PLAYING : logique réseau + update ──────────────────────────────
             if self.game_state == PLAYING:
                 self.transition.update()
@@ -1146,17 +1162,18 @@ class Game:
                 self.ip_input_r.draw(self.screen)
                 self.volume_slider.draw(self.screen)
             elif self.game_state == WAITING_CLIENT:
+                # poll() ici pour recevoir le hello de P2
+                if self.server:
+                    self.server.poll()
                 status = "Connecté !" if (self.server and self.server.connected) else "En attente..."
                 self.waiting_r.draw(self.screen,
                     "En attente de P2...",
-                    [f"Votre IP : {get_local_ip()}",
+                    [f"Votre IP : {self._local_ip_cache}",
                      f"Port UDP : {DEFAULT_PORT}",
                      f"État : {status}",
                      "Communiquez votre IP à P2"])
                 self.volume_slider.draw(self.screen)
-                # Dès que P2 est connecté → sélection de classe
                 if self.server and self.server.connected:
-                    time.sleep(0.3)   # Petit délai pour que P2 reçoive le welcome
                     self.game_state = CHARACTER_SELECT
             elif self.game_state == CONNECTING:
                 err = self._conn_error or "Tentative de connexion..."
@@ -1165,12 +1182,7 @@ class Game:
                     [f"Serveur : {self.ip_input_r.ip_text}:{DEFAULT_PORT}",
                      err])
                 self.volume_slider.draw(self.screen)
-                # Vérifier si la connexion a abouti (welcome reçu)
-                if self.client and self.client.connected:
-                    self.game_state = CHARACTER_SELECT
-                # Si erreur → retour
                 if self._conn_error and self._conn_error.startswith("ERREUR"):
-                    time.sleep(1.5)
                     self.game_state = IP_INPUT
             elif self.game_state == CHARACTER_SELECT:
                 lbl = ""
@@ -1309,42 +1321,28 @@ class Game:
                 self.game_state = ONLINE_MENU
             elif action == "connect":
                 if self.ip_input_r.validate_ip():
-                    self._start_connection(self.ip_input_r.ip_text.strip())
+                    self._pending_ip = self.ip_input_r.ip_text.strip()
+                    self.net_mode = "client"
+                    self.game_state = CHARACTER_SELECT
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             mx, my = event.pos
             if self.ip_input_r.get_connect_rect().collidepoint(mx, my):
                 if self.ip_input_r.validate_ip():
-                    self._start_connection(self.ip_input_r.ip_text.strip())
+                    self._pending_ip = self.ip_input_r.ip_text.strip()
+                    self.net_mode = "client"
+                    self.game_state = CHARACTER_SELECT
             elif self.ip_input_r.get_back_rect().collidepoint(mx, my):
                 self.game_state = ONLINE_MENU
         return running
 
-    def _start_connection(self, ip: str):
-        """
-        Lance la connexion UDP au serveur dans un thread séparé
-        pour ne pas bloquer l'interface pendant le délai réseau.
-        """
-        self.net_mode     = "client"
-        self._conn_error  = ""
-        self.client       = GameClient(ip, DEFAULT_PORT)
-        self.game_state   = CONNECTING
-
-        def _connect_thread():
-            """Thread : envoie le hello et attend le welcome (timeout 10s)."""
-            # On ne connaît pas encore la classe, on l'enverra après CHARACTER_SELECT
-            # Pour l'instant on envoie un hello provisoire
-            self.client.connect("unknown")
-            deadline = time.time() + 10.0
-            while time.time() < deadline:
-                self.client.poll()
-                if self.client.connected:
-                    return
-                time.sleep(0.05)
-            self._conn_error = "ERREUR : Impossible de joindre le serveur (timeout)"
-            print(self._conn_error)
-
-        self._conn_thread = threading.Thread(target=_connect_thread, daemon=True)
-        self._conn_thread.start()
+    def _start_connection(self, ip: str, skill: str):
+        self._conn_error   = ""
+        self._conn_success = False
+        self._pending_skill = skill
+        self._conn_deadline = time.time() + 10.0
+        self.client = GameClient(ip, DEFAULT_PORT)
+        self.client.connect(skill)
+        self.game_state = CONNECTING
 
     def _handle_waiting(self, event, running) -> bool:
         """Host : annuler l'attente de P2."""
@@ -1378,18 +1376,19 @@ class Game:
                     self.game_state = MODE_SELECT
                 return running
             for i, sk in enumerate(list(SKILLS.keys())):
-                if event.key == pygame.K_1+i:
-                    # Client : re-envoyer le hello avec la vraie classe maintenant choisie
-                    if self.net_mode == "client" and self.client:
-                        self.client.connect(sk)   # re-send hello with correct skill
-                    self.start_game(sk)
+                if event.key == pygame.K_1 + i:
+                    if self.net_mode == "client":
+                        self._start_connection(self._pending_ip, sk)
+                    else:
+                        self.start_game(sk)
                     return running
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             for key, rect in self.menu_r.get_card_rects().items():
                 if rect.collidepoint(*event.pos):
-                    if self.net_mode == "client" and self.client:
-                        self.client.connect(key)
-                    self.start_game(key)
+                    if self.net_mode == "client":
+                        self._start_connection(self._pending_ip, key)
+                    else:
+                        self.start_game(key)
                     return running
         elif event.type == pygame.MOUSEMOTION:
             self.selected_skill = None

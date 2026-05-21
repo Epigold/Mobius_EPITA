@@ -895,7 +895,7 @@ class BaseRoom:
             self._draw_player(surface, self.player, ox, oy)
         # Arme P2 réseau (visible côté host)
         if self.mode=="server" and self.player2 and self.player2.health>0:
-            pr2=self._draw_player(surface, self.player2, ox, oy)
+            pr2=self._draw_player(surface, self.player2, ox, oy, tint=(80, 170, 255, 70))
             font_lbl=pygame.font.Font(None,22)
             lbl=font_lbl.render("P2",True,(120,200,255))
             surface.blit(lbl,(pr2.centerx-lbl.get_width()//2,pr2.top-18))
@@ -939,7 +939,7 @@ class BaseRoom:
         pygame.draw.rect(surface,WHITE,(bx,by,bw,12),1,border_radius=3)
         surface.blit(font.render(f"HP {int(p2.health)}/{p2.max_health}",True,WHITE),(bx,by+14))
 
-    def _draw_player(self, surface, player, ox, oy):
+    def _draw_player(self, surface, player, ox, oy, tint=None):
         pr = player.rect.move(ox, oy)
         shadow_w = max(26, int(player.rect.width * (0.48 if player._moving else 0.42)))
         shadow_h = 13 if player._moving else 11
@@ -947,7 +947,11 @@ class BaseRoom:
         pygame.draw.ellipse(shadow, (0, 0, 0, 85), shadow.get_rect())
         surface.blit(shadow, (pr.centerx - shadow.get_width() // 2, pr.bottom - shadow_h))
 
-        img = player.image
+        img = player.image.copy()
+        if tint is not None:
+            overlay = pygame.Surface(img.get_size(), pygame.SRCALPHA)
+            overlay.fill(tint)
+            img.blit(overlay, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
         if abs(player._visual_tilt) > 0.15:
             img = pygame.transform.rotate(img, player._visual_tilt)
         draw_rect = img.get_rect(center=(pr.centerx, pr.centery + int(player._visual_bob)))

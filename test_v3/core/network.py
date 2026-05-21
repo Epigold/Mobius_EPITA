@@ -105,9 +105,10 @@ import threading
 import time
 import math
 import pygame
+from .constants import EPOCHS, SKILLS, GOLD, RED, WHITE, SCREEN_WIDTH, SCREEN_HEIGHT
 
 # ── Constantes réseau ─────────────────────────────────────────────────────────
-DEFAULT_PORT    = 55_555   # Port UDP par défaut (à ouvrir dans le pare-feu)
+DEFAULT_PORT    = 55_600   # Port UDP par défaut (à ouvrir dans le pare-feu)
 RECV_BUFFER     = 65_535   # Taille du buffer de réception UDP (max théorique)
 SEND_BUFFER     = 65_535   # Taille du buffer d'envoi
 CONNECT_TIMEOUT = 10.0     # Secondes avant d'abandonner la tentative de connexion
@@ -120,21 +121,66 @@ PING_INTERVAL   = 1.0      # Secondes entre deux pings de maintien de connexion
 
 def get_local_ip() -> str:
     """
-    Détermine l'adresse IP locale de la machine.
-    Technique : ouvrir un socket UDP vers une IP publique (sans envoyer de paquets)
-    et lire l'IP source que l'OS a choisie.
-
-    Retourne '127.0.0.1' en cas d'échec (pas de réseau).
+    Compatible Windows natif, WSL et Linux.
     """
+    import subprocess
+    import re
+
+    # Méthode 1 : ip route (Linux/WSL) — cherche l'interface utilisée pour sortir
+    try:
+        output = subprocess.check_output(
+            ["ip", "route", "get", "8.8.8.8"],
+            encoding="utf-8", errors="ignore"
+        )
+        match = re.search(r'src\s+([\d.]+)', output)
+        if match:
+            ip = match.group(1)
+            if not ip.startswith('172.24.') and not ip.startswith('127.'):
+                return ip
+    except Exception:
+        pass
+
+    # Méthode 2 : hostname -I (Linux) — liste toutes les IPs, prend la première LAN
+    try:
+        output = subprocess.check_output(
+            ["hostname", "-I"],
+            encoding="utf-8", errors="ignore"
+        ).strip()
+        for ip in output.split():
+            if ip.startswith('192.168.') or ip.startswith('10.'):
+                return ip
+            parts = ip.split('.')
+            if parts[0] == '172' and 16 <= int(parts[1]) <= 31 \
+                    and not ip.startswith('172.24.'):
+                return ip
+    except Exception:
+        pass
+
+    # Méthode 3 : ipconfig (Windows natif)
+    try:
+        output = subprocess.check_output(
+            ["ipconfig"], encoding="cp850", errors="ignore"
+        )
+        ips = re.findall(r'Adresse IPv4.*?:\s*([\d.]+)', output)
+        if not ips:
+            ips = re.findall(r'IPv4 Address.*?:\s*([\d.]+)', output)
+        for ip in ips:
+            if ip.startswith('192.168.') or ip.startswith('10.'):
+                return ip
+    except Exception:
+        pass
+
+    # Méthode 4 : fallback socket
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        # On ne se connecte pas vraiment, juste pour que l'OS choisisse l'interface
         s.connect(('8.8.8.8', 80))
         ip = s.getsockname()[0]
         s.close()
         return ip
     except OSError:
-        return '127.0.0.1'
+        pass
+
+    return '127.0.0.1'
 
 
 def encode(msg: dict) -> bytes:
@@ -574,15 +620,15 @@ class ClientRenderer:
         for edata in state.get('enemies', []):
             self._draw_enemy(surface, edata, epoch)
 
-        # ── 7. Joueur 1 (P1, teinté violet) ──────────────────────────────────
+        # ── 7. Joueur 1 (P1 = l'autre joueur, teinté pour le distinguer) ─────
         p1 = state.get('p1')
         if p1 and p1['health'] > 0:
             self._draw_player(surface, p1, tint=(180, 100, 255, 50))
 
-        # ── 8. Joueur 2 (P2 = nous, teinté bleu) ─────────────────────────────
+        # ── 8. Joueur 2 (P2 = nous, rendu normal) ────────────────────────────
         p2 = state.get('p2')
         if p2 and p2['health'] > 0:
-            self._draw_player(surface, p2, tint=(60, 160, 255, 70))
+            self._draw_player(surface, p2, tint=None)
             # Indicateur "VOUS" au-dessus de P2
             you_txt = self._font_sm.render("▼ VOUS", True, (120, 200, 255))
             surface.blit(you_txt, (p2['x'] - you_txt.get_width()//2, p2['y'] - 58))
@@ -615,7 +661,7 @@ class ClientRenderer:
             True, (150, 200, 255))
         surface.blit(key_hint, (10, self.h - 22))
 
-    def _draw_player(self, surface: pygame.Surface, pdata: dict, tint: tuple):
+    def _draw_player(self, surface: pygame.Surface, pdata: dict, tint: tuple | None):
         """Dessine un joueur à partir de ses données sérialisées."""
         x, y  = pdata['x'], pdata['y']
         state = pdata.get('anim_state', 'idle')
@@ -625,10 +671,11 @@ class ClientRenderer:
         if not pdata.get('facing_right', True):
             img = pygame.transform.flip(img, True, False)
 
-        # Teinte colorée pour distinguer P1 (violet) et P2 (bleu)
-        overlay = pygame.Surface(img.get_size(), pygame.SRCALPHA)
-        overlay.fill(tint)
-        img.blit(overlay, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
+        # Teinte colorée pour distinguer l'autre joueur si demandé
+        if tint is not None:
+            overlay = pygame.Surface(img.get_size(), pygame.SRCALPHA)
+            overlay.fill(tint)
+            img.blit(overlay, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
 
         surface.blit(img, (x - img.get_width()//2, y - img.get_height()//2))
 
