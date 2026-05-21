@@ -564,6 +564,7 @@ class BaseRoom:
         self.boss_spawned=False; self.enemies_this_wave=0; self.enemies_spawned=0
         self.spawn_timer=0; self.next_wave_timer=0; self.show_chest_hint=False
         self._network_game_over=False; self._network_next_epoch=None
+        self._network_frame=0
         self._boss_chest_opened=False
         self.objective_hint=""
 
@@ -583,6 +584,7 @@ class BaseRoom:
         self.mode=mode
         self._network_game_over=False
         self._network_next_epoch=None
+        self._network_frame=0
         self._boss_chest_opened=False
         self.objective_hint=""
         for grp in [self.all_sprites,self.enemies,self.bullets,
@@ -674,31 +676,33 @@ class BaseRoom:
         Sérialise l'état complet du jeu en dict JSON-compatible.
         À appeler APRÈS update() et envoyer via GameServer.send_state().
         """
+        self._network_frame += 1
         def sp(p):
             return {'x':p.rect.centerx,'y':p.rect.centery,
-                    'health':round(p.health,1),'max_health':p.max_health,
-                    'stamina':round(p.stamina,1),'max_stamina':p.max_stamina,
-                    'kills':p.kills,'coins':p.coins,'facing_right':p.facing_right,
-                    'aim_x':int(p.aim_x),'aim_y':int(p.aim_y),
-                    'anim_state':p._anim_state,'skill':p.skill,
-                    'weapon':p.current_weapon.key,'inventory':list(p.inventory)}
+                    'h':round(p.health,1),'mh':p.max_health,
+                    's':round(p.stamina,1),'ms':p.max_stamina,
+                    'k':p.kills,'c':p.coins,'fr':1 if p.facing_right else 0,
+                    'ax':int(p.aim_x),'ay':int(p.aim_y),
+                    'an':p._anim_state,'sk':p.skill,
+                    'w':p.current_weapon.key,'i':list(p.inventory)}
         def se(e):
-            return {'id':id(e),'x':e.rect.centerx,'y':e.rect.centery,
-                    'health':e.health,'max_health':e.max_health,
-                    'type':e.enemy_type,'size':e.size,'epoch':e.epoch_key}
+            return {'i':id(e),'x':e.rect.centerx,'y':e.rect.centery,
+                    'h':int(e.health),'m':int(e.max_health),
+                    't':e.enemy_type,'z':e.size}
         return {
-            'epoch':self.epoch_key,'wave':self.wave,
-            'wave_complete':self.wave_complete,'boss_wave':self.boss_wave,
-            'enemies_left':len(self.enemies),'show_chest_hint':self.show_chest_hint,
-            'objective_hint':self.objective_hint,
-            'game_over':self._network_game_over,'next_epoch':self._network_next_epoch,
+            'v':2,'f':self._network_frame,
+            'ep':self.epoch_key,'wv':self.wave,
+            'wc':1 if self.wave_complete else 0,'bw':1 if self.boss_wave else 0,
+            'el':len(self.enemies),'sh':1 if self.show_chest_hint else 0,
+            'oh':self.objective_hint,
+            'go':1 if self._network_game_over else 0,'ne':self._network_next_epoch,
             'p1':sp(self.player) if self.player else None,
             'p2':sp(self.player2) if self.player2 else None,
-            'enemies':[se(e) for e in self.enemies],
-            'bullets':[{'x':b.rect.centerx,'y':b.rect.centery} for b in self.bullets],
-            'enemy_bullets':[{'x':b.rect.centerx,'y':b.rect.centery} for b in self.enemy_bullets],
-            'powerups':[{'x':p.rect.centerx,'y':p.rect.centery,'type':p.type} for p in self.powerups],
-            'chests':[{'x':c.rect.centerx,'y':c.rect.centery,'opened':c.opened} for c in self.chests],
+            'en':[se(e) for e in self.enemies],
+            'bu':[[b.rect.centerx,b.rect.centery] for b in self.bullets],
+            'eb':[[b.rect.centerx,b.rect.centery] for b in self.enemy_bullets],
+            'pu':[[p.rect.centerx,p.rect.centery,p.type] for p in self.powerups],
+            'ch':[[c.rect.centerx,c.rect.centery,1 if c.opened else 0] for c in self.chests],
         }
 
     # ── Événements (P1 local) ─────────────────────────────────────────────────

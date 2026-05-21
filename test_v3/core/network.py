@@ -405,6 +405,7 @@ class GameClient:
         # Dict sérialisé reçu du serveur, utilisé pour le rendu
         self._latest_state = {}
         self._state_lock   = threading.Lock()
+        self._latest_frame = -1
 
         self.packets_received = 0
         self.last_recv_time   = time.time()
@@ -458,8 +459,12 @@ class GameClient:
 
             # ── État du jeu (chaque frame du serveur) ──────────────────────────
             elif msg_type == 'state':
+                state = msg.get('data', {})
+                frame = int(state.get('f', state.get('frame', -1) or -1))
                 with self._state_lock:
-                    self._latest_state = msg.get('data', {})
+                    if frame >= self._latest_frame:
+                        self._latest_state = state
+                        self._latest_frame = frame
                 self.last_recv_time = time.time()
                 self.packets_received += 1
 
@@ -556,6 +561,82 @@ class ClientRenderer:
         self._font_md = pygame.font.Font(None, 30)
         self._font_sm = pygame.font.Font(None, 22)
 
+    def _normalize_player(self, pdata: dict | None) -> dict | None:
+        if not pdata:
+            return None
+        if 'health' in pdata:
+            return pdata
+        return {
+            'x': int(pdata.get('x', 0)),
+            'y': int(pdata.get('y', 0)),
+            'health': float(pdata.get('h', 0)),
+            'max_health': int(pdata.get('mh', 1)),
+            'stamina': float(pdata.get('s', 0)),
+            'max_stamina': int(pdata.get('ms', 1)),
+            'kills': int(pdata.get('k', 0)),
+            'coins': int(pdata.get('c', 0)),
+            'facing_right': bool(pdata.get('fr', 1)),
+            'aim_x': int(pdata.get('ax', pdata.get('x', 0))),
+            'aim_y': int(pdata.get('ay', pdata.get('y', 0))),
+            'anim_state': pdata.get('an', 'idle'),
+            'skill': pdata.get('sk'),
+            'weapon': pdata.get('w', 'rock'),
+            'inventory': list(pdata.get('i', ['rock'])),
+        }
+
+    def _normalize_enemies(self, state: dict) -> list[dict]:
+        enemies = state.get('enemies')
+        if enemies is not None:
+            return enemies
+        out = []
+        for edata in state.get('en', []):
+            out.append({
+                'id': edata.get('i', 0),
+                'x': int(edata.get('x', 0)),
+                'y': int(edata.get('y', 0)),
+                'health': int(edata.get('h', 0)),
+                'max_health': int(edata.get('m', 1)),
+                'type': edata.get('t', 'rusher'),
+                'size': int(edata.get('z', 40)),
+            })
+        return out
+
+    def _normalize_points(self, values: list, key: str | None = None) -> list[dict]:
+        out = []
+        for entry in values:
+            if isinstance(entry, dict):
+                out.append(entry)
+                continue
+            if not isinstance(entry, (list, tuple)) or len(entry) < 2:
+                continue
+            item = {'x': int(entry[0]), 'y': int(entry[1])}
+            if key and len(entry) > 2:
+                item[key] = entry[2]
+            out.append(item)
+        return out
+
+    def _normalize_state(self, state: dict) -> dict:
+        if state.get('v') != 2:
+            return state
+        return {
+            'epoch': state.get('ep', 'prehistoire'),
+            'wave': int(state.get('wv', 1)),
+            'wave_complete': bool(state.get('wc', 0)),
+            'boss_wave': bool(state.get('bw', 0)),
+            'enemies_left': int(state.get('el', 0)),
+            'show_chest_hint': bool(state.get('sh', 0)),
+            'objective_hint': state.get('oh', ''),
+            'game_over': bool(state.get('go', 0)),
+            'next_epoch': state.get('ne'),
+            'p1': self._normalize_player(state.get('p1')),
+            'p2': self._normalize_player(state.get('p2')),
+            'enemies': self._normalize_enemies(state),
+            'bullets': self._normalize_points(state.get('bu', [])),
+            'enemy_bullets': self._normalize_points(state.get('eb', [])),
+            'powerups': self._normalize_points(state.get('pu', []), key='type'),
+            'chests': self._normalize_points(state.get('ch', []), key='opened'),
+        }
+
     def draw(self, surface: pygame.Surface, state: dict):
         """
         Dessine l'état complet du jeu à partir du dict reçu du serveur.
@@ -574,6 +655,7 @@ class ClientRenderer:
           11. Infos de vague
           12. Hint coffre
         """
+        state = self._normalize_state(state)
         epoch = state.get('epoch', 'prehistoire')
 
         # ── 1. Fond ───────────────────────────────────────────────────────────
@@ -599,10 +681,11 @@ class ClientRenderer:
         # ── 3. Coffres ────────────────────────────────────────────────────────
         for chest in state.get('chests', []):
             cx, cy = chest['x'], chest['y']
-            col = (80, 140, 80) if chest['opened'] else (180, 120, 30)
+            opened = bool(chest['opened'])
+            col = (80, 140, 80) if opened else (180, 120, 30)
             pygame.draw.rect(surface, col, (cx-32, cy-26, 64, 52), border_radius=5)
             pygame.draw.rect(surface, (255, 215, 0), (cx-32, cy-26, 64, 52), 2, border_radius=5)
-            if not chest['opened']:
+            if not opened:
                 # Serrure
                 pygame.draw.rect(surface, (255, 215, 0), (cx-6, cy-8, 12, 10), border_radius=2)
 
@@ -625,6 +708,8 @@ class ClientRenderer:
         p1 = state.get('p1')
         if p1 and p1['health'] > 0:
             self._draw_player(surface, p1, tint=(180, 100, 255, 50))
+            p1_txt = self._font_sm.render("P1", True, (220, 180, 255))
+            surface.blit(p1_txt, (p1['x'] - p1_txt.get_width()//2, p1['y'] - 58))
 
         # ── 8. Joueur 2 (P2 = nous, rendu normal) ────────────────────────────
         p2 = state.get('p2')
