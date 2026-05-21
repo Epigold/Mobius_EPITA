@@ -1120,9 +1120,7 @@ class BaseRoom:
 
         img = player.image.copy()
         if tint is not None:
-            overlay = pygame.Surface(img.get_size(), pygame.SRCALPHA)
-            overlay.fill(tint)
-            img.blit(overlay, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
+            img = tint_surface(img, tint[:3], alpha=tint[3] if len(tint) > 3 else 180)
         if abs(player._visual_tilt) > 0.15 and not player.is_downed:
             img = pygame.transform.rotate(img, player._visual_tilt)
         draw_rect = img.get_rect(center=(pr.centerx, pr.centery + int(player._visual_bob)))

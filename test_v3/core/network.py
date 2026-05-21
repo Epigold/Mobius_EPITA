@@ -106,7 +106,7 @@ import time
 import math
 import pygame
 from .constants import EPOCHS, SKILLS, GOLD, RED, WHITE, SCREEN_WIDTH, SCREEN_HEIGHT
-from .graphics import draw_weapon_in_hand
+from .graphics import draw_weapon_in_hand, tint_surface
 
 # -- Constantes reseau ---------------------------------------------------------
 DEFAULT_PORT    = 55_600   # Port UDP par defaut (a ouvrir dans le pare-feu)
@@ -837,9 +837,7 @@ class ClientRenderer:
 
         # Teinte coloree pour distinguer l'autre joueur si demande
         if tint is not None:
-            overlay = pygame.Surface(img.get_size(), pygame.SRCALPHA)
-            overlay.fill(tint)
-            img.blit(overlay, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
+            img = tint_surface(img, tint[:3], alpha=tint[3] if len(tint) > 3 else 180)
         draw_rect = img.get_rect(center=(x, y))
         surface.blit(img, draw_rect)
         weapon_key = pdata.get('weapon')
@@ -936,6 +934,7 @@ class ClientRenderer:
         """Dessine notre HUD (P2) en bas a gauche, similaire au HUD standard."""
         # Deleguer au HUDRenderer standard si possible (il attend un objet Player)
         # On cree un objet temporaire pour l'adapter
+        from .mechanics import Weapon
         class _FakePlayer:
             pass
         fp = _FakePlayer()
@@ -947,7 +946,7 @@ class ClientRenderer:
         fp.coins       = p2['coins']
         fp.skill       = p2['skill']
         fp.inventory   = p2['inventory']
-        fp.current_weapon = type('W', (), {'key': p2['weapon']})()
+        fp.current_weapon = Weapon(p2['weapon']) if p2.get('weapon') else None
         fp.skill_cooldown = 0
         fp.skill_active   = False
         fp.dash_cooldown  = 0
