@@ -1253,6 +1253,8 @@ class Game:
         return {
             "dx":        dx,
             "dy":        dy,
+            "aim_x":     mx,
+            "aim_y":     my,
             "dash":      bool(keys[pygame.K_SPACE]),
             "skill":     bool(keys[pygame.K_f]),
             "fire":      bool(mouse[0]),        # Clic gauche

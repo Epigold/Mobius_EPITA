@@ -717,7 +717,7 @@ class ScreenEffects:
 #  RENDU DE L'ARME DANS LA MAIN DU JOUEUR
 # ══════════════════════════════════════════════════════════════════════════════
 
-def draw_weapon_in_hand(surface, player_rect, weapon, facing_right=True):
+def draw_weapon_in_hand(surface, player_rect, weapon, facing_right=True, aim_pos=None):
     """
     Dessine le sprite de l'arme rotatif autour du personnage,
     orienté vers la souris.
@@ -725,8 +725,11 @@ def draw_weapon_in_hand(surface, player_rect, weapon, facing_right=True):
     if weapon is None:
         return
 
-    mx, my = pygame.mouse.get_pos()
     cx, cy = player_rect.centerx, player_rect.centery
+    if aim_pos is None:
+        mx, my = pygame.mouse.get_pos()
+    else:
+        mx, my = aim_pos
 
     dx = mx - cx
     dy = my - cy

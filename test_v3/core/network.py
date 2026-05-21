@@ -106,6 +106,7 @@ import time
 import math
 import pygame
 from .constants import EPOCHS, SKILLS, GOLD, RED, WHITE, SCREEN_WIDTH, SCREEN_HEIGHT
+from .graphics import draw_weapon_in_hand
 
 # ── Constantes réseau ─────────────────────────────────────────────────────────
 DEFAULT_PORT    = 55_600   # Port UDP par défaut (à ouvrir dans le pare-feu)
@@ -677,7 +678,15 @@ class ClientRenderer:
             overlay.fill(tint)
             img.blit(overlay, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
 
-        surface.blit(img, (x - img.get_width()//2, y - img.get_height()//2))
+        draw_rect = img.get_rect(center=(x, y))
+        surface.blit(img, draw_rect)
+        weapon_key = pdata.get('weapon')
+        if weapon_key:
+            from .mechanics import Weapon
+            weapon = Weapon(weapon_key)
+            aim_x = int(pdata.get('aim_x', x + (100 if pdata.get('facing_right', True) else -100)))
+            aim_y = int(pdata.get('aim_y', y))
+            draw_weapon_in_hand(surface, draw_rect, weapon, pdata.get('facing_right', True), aim_pos=(aim_x, aim_y))
 
     def _draw_enemy(self, surface: pygame.Surface, edata: dict, epoch: str):
         """Dessine un ennemi et sa barre de vie à partir de ses données sérialisées."""

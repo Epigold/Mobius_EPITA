@@ -54,6 +54,8 @@ class Player(pygame.sprite.Sprite):
         self._dash_cd_max = DASH_COOLDOWN // 2 if skill == "ninja" else DASH_COOLDOWN
         self.dir_x = self.dir_y = 0
         self.facing_right = True
+        self.aim_x = 0
+        self.aim_y = 0
 
         # ── Compétence ────────────────────────────────────────────────────────
         self.skill_cooldown = 0; self.skill_active = False; self.skill_duration = 0
@@ -77,6 +79,8 @@ class Player(pygame.sprite.Sprite):
         self.rect.center = start_pos if start_pos else (SCREEN_WIDTH//2, SCREEN_HEIGHT//2)
         self.hitbox = pygame.Rect(0,0,self.SIZE*0.4,self.SIZE*0.4)
         self.hitbox.center = self.rect.center
+        self.aim_x = self.rect.centerx + 100
+        self.aim_y = self.rect.centery
 
         # Groupes de sprites (injectés par BaseRoom.start())
         self._bullets = None; self._melee_attacks = None; self._all_sprites = None
@@ -155,6 +159,10 @@ class Player(pygame.sprite.Sprite):
             self.dir_x = 0
             self.dir_y = 0
 
+        self.aim_x = int(inputs.get('aim_x', inputs.get('fire_tx', self.aim_x)))
+        self.aim_y = int(inputs.get('aim_y', inputs.get('fire_ty', self.aim_y)))
+        self.facing_right = self.aim_x >= self.rect.centerx
+
         # Actions discrètes → flags consommés dans _handle_move_network()
         if inputs.get('dash'):  self._net_dash  = True
         if inputs.get('skill'): self._net_skill = True
@@ -211,6 +219,9 @@ class Player(pygame.sprite.Sprite):
     def _handle_move(self, keys):
         """Déplacement de P1 via clavier ZQSD/WASD + ESPACE pour dash."""
         mx, _ = pygame.mouse.get_pos()
+        _, my = pygame.mouse.get_pos()
+        self.aim_x = mx
+        self.aim_y = my
         self.facing_right = mx >= self.rect.centerx
 
         if self.dashing:
@@ -668,6 +679,7 @@ class BaseRoom:
                     'health':round(p.health,1),'max_health':p.max_health,
                     'stamina':round(p.stamina,1),'max_stamina':p.max_stamina,
                     'kills':p.kills,'coins':p.coins,'facing_right':p.facing_right,
+                    'aim_x':int(p.aim_x),'aim_y':int(p.aim_y),
                     'anim_state':p._anim_state,'skill':p.skill,
                     'weapon':p.current_weapon.key,'inventory':list(p.inventory)}
         def se(e):
@@ -956,5 +968,11 @@ class BaseRoom:
             img = pygame.transform.rotate(img, player._visual_tilt)
         draw_rect = img.get_rect(center=(pr.centerx, pr.centery + int(player._visual_bob)))
         surface.blit(img, draw_rect)
-        draw_weapon_in_hand(surface, draw_rect, player.current_weapon, player.facing_right)
+        draw_weapon_in_hand(
+            surface,
+            draw_rect,
+            player.current_weapon,
+            player.facing_right,
+            aim_pos=(player.aim_x + ox, player.aim_y + oy),
+        )
         return draw_rect
