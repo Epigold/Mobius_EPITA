@@ -2,11 +2,11 @@
 # epoques/moderne.py
 
 """
-ÉPOQUE : ÈRE MODERNE
-Personnage : Soldat napoléonien
-Armes     : Carabine (distance) · Couteau (mêlée)
-Thème     : Champ de bataille, fumée, ciel plombé
-Difficulté: ×2.0
+EPOQUE : ERE MODERNE
+Personnage : Soldat napoleonien
+Armes     : Carabine (distance)  -  Couteau (melee)
+Theme     : Champ de bataille, fumee, ciel plombe
+Difficulte: x2.0
 """
 
 import pygame
@@ -20,20 +20,20 @@ class ModerneRoom(BaseRoom):
 
     def __init__(self, game):
         super().__init__(game, "moderne")
-        self.epoch_name_display = "ÈRE MODERNE"
+        self.epoch_name_display = "ERE MODERNE"
         self.theme_color = MODERNE_COLOR
         self._smoke_puffs = []
         self._smoke_timer = 0
 
     def on_enter(self):
-        print("🎺 Pour l'Empereur !")
+        print("Pour l'Empereur !")
 
     def on_exit(self):
-        print("🏳 La bataille est gagnée !")
+        print("La bataille est gagnee !")
 
     def draw_epoch_decoration(self, surface):
         self._smoke_timer += 1
-        # Ajouter des volutes de fumée de canon
+        # Ajouter des volutes de fumee de canon
         if self._smoke_timer % 45 == 0:
             sx = random.randint(100, SCREEN_WIDTH - 100)
             self._smoke_puffs.append({
@@ -42,7 +42,7 @@ class ModerneRoom(BaseRoom):
                 "r": random.randint(12, 24),
             })
 
-        # Mettre à jour et dessiner
+        # Mettre a jour et dessiner
         alive = []
         for puff in self._smoke_puffs:
             puff["y"]     += puff["vy"]

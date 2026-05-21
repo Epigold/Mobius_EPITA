@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
-# core/graphics.py - Système graphique centralisé pour Mobius Roguelike
+# core/graphics.py - Systeme graphique centralise pour Mobius Roguelike
 
 """
-Gère :
-  • Chargement & cache des sprites
-  • Génération procédurale des backgrounds par époque
-  • Rendu HUD (barres HP/Stamina, vague, stats)
-  • Système de particules (sang, explosion, magie)
-  • Effets visuels (flash, screen-shake, dégâts flottants)
+Gere :
+   -  Chargement & cache des sprites
+   -  Generation procedurale des backgrounds par epoque
+   -  Rendu HUD (barres HP/Stamina, vague, stats)
+   -  Systeme de particules (sang, explosion, magie)
+   -  Effets visuels (flash, screen-shake, degats flottants)
 """
 
 import pygame
@@ -20,9 +20,9 @@ EPOCH_BACKGROUND_ASSETS = {
 }
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 #  CACHE DE SPRITES
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 
 class SpriteCache:
     """Charge et met en cache tous les sprites du jeu."""
@@ -72,7 +72,7 @@ class SpriteCache:
             except Exception:
                 pass
 
-        # Fallback dessiné
+        # Fallback dessine
         surf = pygame.Surface(target_size, pygame.SRCALPHA)
         pygame.draw.ellipse(surf, fallback_color, (0, 0, *target_size))
         pygame.draw.ellipse(surf, WHITE, (0, 0, *target_size), 2)
@@ -85,7 +85,7 @@ class SpriteCache:
 
     @staticmethod
     def _make_fallback(size, path_parts):
-        """Surface placeholder colorée si le fichier est absent."""
+        """Surface placeholder coloree si le fichier est absent."""
         surf = pygame.Surface(size, pygame.SRCALPHA)
         color = (random.randint(80, 200), random.randint(80, 200), random.randint(80, 200), 200)
         pygame.draw.rect(surf, color, surf.get_rect(), border_radius=6)
@@ -95,28 +95,28 @@ class SpriteCache:
         return surf
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  BACKGROUNDS PROCÉDURAUX PAR ÉPOQUE
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
+#  BACKGROUNDS PROCEDURAUX PAR EPOQUE
+# ==============================================================================
 
 class BackgroundRenderer:
-    """Génère et rend les backgrounds thématiques de chaque époque."""
+    """Genere et rend les backgrounds thematiques de chaque epoque."""
 
     def __init__(self, screen_w, screen_h):
         self.w = screen_w
         self.h = screen_h
         self._surfaces = {}
 
-    # ── API publique ────────────────────────────────────────────────────────
+    # -- API publique --------------------------------------------------------
 
     def get(self, epoch_key):
-        """Retourne (et génère si besoin) la surface de fond pour l'époque."""
+        """Retourne (et genere si besoin) la surface de fond pour l'epoque."""
         if epoch_key not in self._surfaces:
             self._surfaces[epoch_key] = self._build(epoch_key)
         return self._surfaces[epoch_key]
 
     def _build(self, epoch_key):
-        """Charge un fond dédié à l'époque si disponible, sinon génère procéduralement."""
+        """Charge un fond dedie a l'epoque si disponible, sinon genere proceduralement."""
         asset_parts = EPOCH_BACKGROUND_ASSETS.get(epoch_key)
         if asset_parts:
             try:
@@ -152,11 +152,11 @@ class BackgroundRenderer:
             surf.fill(tint)
         return surf
 
-    # ── Dessin ──────────────────────────────────────────────────────────────
+    # -- Dessin --------------------------------------------------------------
 
     def _draw_prehistoric(self, surf, tint):
         """Sol terreux, grotte, stalactites."""
-        # Ciel brun-orangé
+        # Ciel brun-orange
         for y in range(self.h):
             t = y / self.h
             r = int(tint[0] * (1 - t * 0.4))
@@ -183,8 +183,8 @@ class BackgroundRenderer:
             pygame.draw.circle(surf, (255, 180, 80), (tx, self.h - 185), 12)
 
     def _draw_greece(self, surf, tint):
-        """Ciel bleu méditerranéen, colonnes."""
-        # Ciel dégradé
+        """Ciel bleu mediterraneen, colonnes."""
+        # Ciel degrade
         for y in range(self.h):
             t = y / self.h
             r = int(120 * (1 - t) + 200 * t)
@@ -210,7 +210,7 @@ class BackgroundRenderer:
         # Lune
         pygame.draw.circle(surf, (240, 230, 180), (self.w - 150, 100), 60)
         pygame.draw.circle(surf, (15, 5, 30), (self.w - 130, 90), 55)  # ombre
-        # Étoiles
+        # Etoiles
         rng = random.Random(99)
         for _ in range(120):
             sx, sy = rng.randint(0, self.w), rng.randint(0, self.h // 2)
@@ -237,7 +237,7 @@ class BackgroundRenderer:
             pygame.draw.polygon(surf, (120, 20, 20), pts)
 
     def _draw_moderne(self, surf, tint):
-        """Champ de bataille napoléonien, fumée."""
+        """Champ de bataille napoleonien, fumee."""
         for y in range(self.h):
             t = y / self.h
             r = int(80 * (1 - t) + 120 * t)
@@ -250,7 +250,7 @@ class BackgroundRenderer:
         for cx in [self.w // 5, self.w * 4 // 5]:
             pygame.draw.ellipse(surf, (30, 30, 30), (cx - 10, self.h - 200, 80, 25))
             pygame.draw.rect(surf, (25, 25, 25), (cx - 5, self.h - 215, 30, 20), border_radius=4)
-        # Fumée
+        # Fumee
         for _ in range(20):
             sx = rng.randint(0, self.w)
             sy = rng.randint(0, self.h // 2)
@@ -258,7 +258,7 @@ class BackgroundRenderer:
             pygame.draw.circle(surf, (100, 95, 90), (sx, sy), rad)
 
     def _draw_contemporain(self, surf, tint):
-        """Jungle/forêt WW2, bunker."""
+        """Jungle/foret WW2, bunker."""
         surf.fill((20, 30, 15))
         rng = random.Random(55)
         # Feuillage
@@ -269,17 +269,17 @@ class BackgroundRenderer:
             pygame.draw.circle(surf, (20, rng.randint(60, 120), 20), (fx, fy), fr)
         # Sol
         pygame.draw.rect(surf, (30, 45, 20), (0, self.h - 110, self.w, 110))
-        # Barbelés
+        # Barbeles
         for x in range(0, self.w, 60):
             pygame.draw.line(surf, (80, 80, 80), (x, self.h - 130), (x + 50, self.h - 120), 2)
         # Bunker
         pygame.draw.rect(surf, (60, 60, 50),
                          (self.w // 2 - 100, self.h - 240, 200, 110), border_radius=4)
         pygame.draw.rect(surf, (40, 40, 35),
-                         (self.w // 2 - 15, self.h - 200, 30, 60))  # entrée
+                         (self.w // 2 - 15, self.h - 200, 30, 60))  # entree
 
     def _draw_future(self, surf, tint):
-        """Station spatiale, néons cyan."""
+        """Station spatiale, neons cyan."""
         surf.fill((0, 5, 20))
         rng = random.Random(11)
         # Grille holographique
@@ -288,30 +288,30 @@ class BackgroundRenderer:
             pygame.draw.line(surf, grid_col, (x, 0), (x, self.h), 1)
         for y in range(0, self.h, 80):
             pygame.draw.line(surf, grid_col, (0, y), (self.w, y), 1)
-        # Étoiles
+        # Etoiles
         for _ in range(200):
             sx, sy = rng.randint(0, self.w), rng.randint(0, self.h)
             pygame.draw.circle(surf, (200, 220, 255), (sx, sy), rng.randint(1, 2))
-        # Sol métallique
+        # Sol metallique
         pygame.draw.rect(surf, (15, 25, 40), (0, self.h - 120, self.w, 120))
         for x in range(0, self.w, 60):
             pygame.draw.line(surf, (0, 80, 120), (x, self.h - 120), (x, self.h), 1)
-        # Néons
+        # Neons
         for nx in range(0, self.w, 200):
             pygame.draw.rect(surf, (0, 220, 255),
                              (nx, self.h - 125, 80, 4), border_radius=2)
-        # Pilliers métal
+        # Pilliers metal
         for px in range(80, self.w, 250):
             pygame.draw.rect(surf, (20, 40, 60), (px - 10, 0, 20, self.h - 120))
             pygame.draw.line(surf, (0, 200, 255), (px, 0), (px, self.h - 120), 2)
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 #  HUD RENDERER
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 
 class HUDRenderer:
-    """Dessine toute l'interface (barres, stats, vague, armes, compétences)."""
+    """Dessine toute l'interface (barres, stats, vague, armes, competences)."""
 
     BAR_W      = 220
     BAR_H_HP   = 22
@@ -339,7 +339,7 @@ class HUDRenderer:
         pygame.draw.rect(self._bar_bg_hp, (180, 0, 0), self._bar_bg_hp.get_rect(),
                          border_radius=self.CORNER_R)
 
-    # ── Public ──────────────────────────────────────────────────────────────
+    # -- Public --------------------------------------------------------------
 
     def draw(self, surface, player, epoch_key, wave, wave_complete,
              boss_wave=False, enemies_left=0):
@@ -352,7 +352,7 @@ class HUDRenderer:
         self._draw_wave_info(surface, epoch_key, wave, wave_complete, boss_wave, enemies_left)
         self._draw_epoch_badge(surface, epoch_key)
 
-    # ── Privé ────────────────────────────────────────────────────────────────
+    # -- Prive ----------------------------------------------------------------
 
     def _draw_panel_bg(self, surface):
         panel = pygame.Surface((self.BAR_W + 80, 190), pygame.SRCALPHA)
@@ -368,7 +368,7 @@ class HUDRenderer:
 
         # Fond
         pygame.draw.rect(surface, (80, 0, 0), (x, y, w, h), border_radius=self.CORNER_R)
-        # Remplissage couleur → vert si > 60%, orange si > 30%, rouge sinon
+        # Remplissage couleur -> vert si > 60%, orange si > 30%, rouge sinon
         if ratio > 0.6:
             bar_col = (30, 200, 60)
         elif ratio > 0.3:
@@ -382,7 +382,7 @@ class HUDRenderer:
         # Bordure
         pygame.draw.rect(surface, WHITE, (x, y, w, h), 2, border_radius=self.CORNER_R)
         # Texte
-        txt = self.font_sm.render(f"♥  {int(player.health)} / {player.max_health}", True, WHITE)
+        txt = self.font_sm.render(f"HP {int(player.health)} / {player.max_health}", True, WHITE)
         surface.blit(txt, (x + 6, y + h // 2 - txt.get_height() // 2))
 
     def _draw_stamina_bar(self, surface, player):
@@ -396,14 +396,14 @@ class HUDRenderer:
             pygame.draw.rect(surface, (80, 160, 255), (x, y, fill_w, h),
                              border_radius=self.CORNER_R)
         pygame.draw.rect(surface, (150, 190, 255), (x, y, w, h), 1, border_radius=self.CORNER_R)
-        txt = self.font_sm.render(f"⚡ {int(player.stamina)}/{player.max_stamina}", True, (180, 210, 255))
+        txt = self.font_sm.render(f"STA {int(player.stamina)}/{player.max_stamina}", True, (180, 210, 255))
         surface.blit(txt, (x + 4, y + h // 2 - txt.get_height() // 2))
 
     def _draw_weapon_info(self, surface, player):
         y = 62
-        wname = player.current_weapon.name if player.current_weapon else "—"
+        wname = player.current_weapon.name if player.current_weapon else "-"
         wtype = player.current_weapon.type if player.current_weapon else ""
-        icon  = "🏹" if wtype == "ranged" else "⚔"
+        icon  = "RNG" if wtype == "ranged" else "MEL"
 
         # Cooldown
         cd     = player.current_weapon.cooldown if player.current_weapon else 0
@@ -433,22 +433,22 @@ class HUDRenderer:
 
     def _draw_stats(self, surface, player):
         y = 122
-        kills_txt = self.font_sm.render(f"☠ {player.kills}   💰 {player.coins}", True, GOLD)
+        kills_txt = self.font_sm.render(f"Kills {player.kills}   Coins {player.coins}", True, GOLD)
         surface.blit(kills_txt, (self.BAR_X, y))
 
         # Boosts actifs
         boost_y = y + 18
         if player.boost_timer > 0:
             if player.damage_boost > 1.0:
-                b = self.font_sm.render("⚡ DMG×1.5", True, (255, 120, 60))
+                b = self.font_sm.render("DMG x1.5", True, (255, 120, 60))
                 surface.blit(b, (self.BAR_X, boost_y))
             if player.speed_boost > 1.0:
-                b = self.font_sm.render("⚡ SPD×1.5", True, CYAN)
+                b = self.font_sm.render("SPD x1.5", True, CYAN)
                 surface.blit(b, (self.BAR_X + 80, boost_y))
 
         # Bouclier tank
         if getattr(player, "skill", None) == "tank" and player.skill_active:
-            b = self.font_sm.render("🛡 BOUCLIER", True, BLUE)
+            b = self.font_sm.render("BOUCLIER", True, BLUE)
             surface.blit(b, (self.BAR_X, boost_y))
 
     def _draw_skill_indicator(self, surface, player):
@@ -457,19 +457,19 @@ class HUDRenderer:
             return
         if player.skill_cooldown > 0:
             secs = player.skill_cooldown // 60
-            txt = self.font_sm.render(f"F · {secs}s", True, (200, 80, 80))
+            txt = self.font_sm.render(f"F  -  {secs}s", True, (200, 80, 80))
         else:
-            txt = self.font_sm.render("F · Prête!", True, (80, 255, 80))
+            txt = self.font_sm.render("F  -  Prete!", True, (80, 255, 80))
         surface.blit(txt, (self.BAR_X, y))
 
     def _draw_wave_info(self, surface, epoch_key, wave, wave_complete,
                         boss_wave, enemies_left):
         if wave_complete:
-            txt = self.font_md.render("✔ Vague terminée — Préparez-vous...", True, GOLD)
+            txt = self.font_md.render("Vague terminee - Preparez-vous...", True, GOLD)
         elif boss_wave:
-            txt = self.font_md.render(f"💀 VAGUE {wave} — BOSS", True, PURPLE)
+            txt = self.font_md.render(f"VAGUE {wave} - BOSS", True, PURPLE)
         else:
-            txt = self.font_md.render(f"Vague {wave}  ·  {enemies_left} ennemi(s)", True, WHITE)
+            txt = self.font_md.render(f"Vague {wave}   -   {enemies_left} ennemi(s)", True, WHITE)
         r = txt.get_rect()
         r.topright = (self.w - 16, 12)
 
@@ -493,9 +493,9 @@ class HUDRenderer:
         surface.blit(txt, r)
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  SYSTÈME DE PARTICULES
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
+#  SYSTEME DE PARTICULES
+# ==============================================================================
 
 class Particle:
     __slots__ = ("x", "y", "vx", "vy", "r", "color", "life", "max_life", "gravity")
@@ -532,7 +532,7 @@ class Particle:
 
 
 class ParticleSystem:
-    """Gère toutes les particules actives."""
+    """Gere toutes les particules actives."""
 
     def __init__(self):
         self._particles: list[Particle] = []
@@ -546,7 +546,7 @@ class ParticleSystem:
         for p in self._particles:
             p.draw(surface)
 
-    # ── Emetteurs prédéfinis ────────────────────────────────────────────────
+    # -- Emetteurs predefinis ------------------------------------------------
 
     def emit_blood(self, x, y, count=8):
         for _ in range(count):
@@ -616,12 +616,12 @@ class ParticleSystem:
                                              life=random.randint(20, 45), gravity=0.2))
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 #  EFFETS VISUELS (FLOATING DAMAGE, SCREEN SHAKE)
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 
 class FloatingText:
-    """Texte de dégâts qui monte et disparaît."""
+    """Texte de degats qui monte et disparait."""
 
     def __init__(self, x, y, text, color=WHITE, font_size=26):
         self.x, self.y = float(x), float(y)
@@ -672,7 +672,7 @@ class FloatingTextSystem:
 
 
 class ScreenEffects:
-    """Flash rouge à l'impact, screen-shake."""
+    """Flash rouge a l'impact, screen-shake."""
 
     def __init__(self, screen_w, screen_h):
         self.w, self.h    = screen_w, screen_h
@@ -713,14 +713,14 @@ class ScreenEffects:
         return self._offset
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 #  RENDU DE L'ARME DANS LA MAIN DU JOUEUR
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 
 def draw_weapon_in_hand(surface, player_rect, weapon, facing_right=True, aim_pos=None):
     """
     Dessine le sprite de l'arme rotatif autour du personnage,
-    orienté vers la souris.
+    oriente vers la souris.
     """
     if weapon is None:
         return
@@ -735,7 +735,7 @@ def draw_weapon_in_hand(surface, player_rect, weapon, facing_right=True, aim_pos
     dy = my - cy
     angle = math.degrees(math.atan2(-dy, dx))
 
-    # Flip horizontal si le joueur regarde à gauche
+    # Flip horizontal si le joueur regarde a gauche
     img = weapon.original_image
     if not facing_right:
         img = pygame.transform.flip(img, False, True)
@@ -750,12 +750,12 @@ def draw_weapon_in_hand(surface, player_rect, weapon, facing_right=True, aim_pos
     surface.blit(rotated, wr)
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  RENDU DES ENNEMIS PAR ÉPOQUE (couleur, bordure, effets)
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
+#  RENDU DES ENNEMIS PAR EPOQUE (couleur, bordure, effets)
+# ==============================================================================
 
 def tint_surface(surface, color, alpha=180):
-    """Applique une teinte colorée à une Surface (copie)."""
+    """Applique une teinte coloree a une Surface (copie)."""
     result = surface.copy()
     tint   = pygame.Surface(result.get_size(), pygame.SRCALPHA)
     tint.fill((*color[:3], alpha))

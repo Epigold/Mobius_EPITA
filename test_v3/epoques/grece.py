@@ -1,24 +1,24 @@
 # -*- coding: utf-8 -*-
-# epoques/grece.py — GRÈCE ANTIQUE (soleil supprimé)
+# epoques/grece.py - GRECE ANTIQUE (soleil supprime)
 import pygame
 import math
 from core.base_room import BaseRoom
 from core.constants  import *
 
 class GreceRoom(BaseRoom):
-    """Salle Grèce Antique. Soleil animé désactivé — draw_epoch_decoration vide."""
+    """Salle Grece Antique. Soleil anime desactive - draw_epoch_decoration vide."""
     def __init__(self, game):
         super().__init__(game, "grece")
-        self.epoch_name_display = "GRÈCE ANTIQUE"
+        self.epoch_name_display = "GRECE ANTIQUE"
         self.theme_color        = GRECE_COLOR
 
-    def on_enter(self):  print("🏛 Que les dieux vous guident !")
-    def on_exit(self):   print("⚡ La gloire de l'Olympe vous appartient !")
+    def on_enter(self):  print("Que les dieux vous guident !")
+    def on_exit(self):   print("La gloire de l'Olympe vous appartient !")
 
     def draw_epoch_decoration(self, surface):
         """
-        Aucune décoration active.
-        Pour remettre le soleil, décommenter ce qui suit :
+        Aucune decoration active.
+        Pour remettre le soleil, decommenter ce qui suit :
 
         self._sun_angle = getattr(self, '_sun_angle', 0) + 0.005
         cx, cy = int(SCREEN_WIDTH*0.85), 80

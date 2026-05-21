@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# core/mechanics.py - Classes de mécanique : Weapon, Projectile, MeleeAttack, PowerUp, Chest
+# core/mechanics.py - Classes de mecanique : Weapon, Projectile, MeleeAttack, PowerUp, Chest
 
 import pygame
 import math
@@ -8,12 +8,12 @@ from .constants import *
 from .graphics   import SpriteCache, draw_weapon_in_hand
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 #  ARME
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 
 class Weapon:
-    """Représente une arme tenue par le joueur."""
+    """Represente une arme tenue par le joueur."""
 
     def __init__(self, weapon_key: str):
         self.key  = weapon_key
@@ -37,7 +37,7 @@ class Weapon:
         self.original_image = cache.load_weapon(weapon_key, (self.size, self.size))
         self.image          = self.original_image.copy()
 
-    # ── Cooldown ─────────────────────────────────────────────────────────────
+    # -- Cooldown -------------------------------------------------------------
     def update_cooldown(self):
         if self.cooldown > 0:
             self.cooldown -= 1
@@ -49,9 +49,9 @@ class Weapon:
         self.cooldown = self.cooldown_max
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 #  PROJECTILE JOUEUR
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 
 class Bullet(pygame.sprite.Sprite):
     def __init__(self, x, y, target_x, target_y, weapon: Weapon,
@@ -61,7 +61,7 @@ class Bullet(pygame.sprite.Sprite):
         self.epoch  = epoch_key
         self.owner  = owner
 
-        # Sprite : copie du sprite de l'arme (redimensionné)
+        # Sprite : copie du sprite de l'arme (redimensionne)
         base = weapon.image
         proj_size = max(20, weapon.size // 2)
         self.original_image = pygame.transform.scale(base, (proj_size, proj_size))
@@ -93,9 +93,9 @@ class Bullet(pygame.sprite.Sprite):
             self.kill()
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  ATTAQUE MÊLÉE JOUEUR
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
+#  ATTAQUE MELEE JOUEUR
+# ==============================================================================
 
 class MeleeAttack(pygame.sprite.Sprite):
     def __init__(self, x, y, target_x, target_y, weapon: Weapon, damage_mult=1.0, owner=None):
@@ -128,9 +128,9 @@ class MeleeAttack(pygame.sprite.Sprite):
             self.kill()
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 #  PROJECTILE ENNEMI
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 
 class EnemyBullet(pygame.sprite.Sprite):
     def __init__(self, x, y, target_x, target_y,
@@ -165,15 +165,15 @@ class EnemyBullet(pygame.sprite.Sprite):
             self.kill()
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 #  POWER-UP
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 
 _POWERUP_STYLES = {
-    "damage":  {"color": (220, 60, 60),  "symbol": "⚡", "label": "DMG"},
-    "speed":   {"color": (60, 200, 220), "symbol": "➤",  "label": "SPD"},
-    "health":  {"color": (60, 200, 80),  "symbol": "♥",  "label": "HP"},
-    "stamina": {"color": (80, 120, 255), "symbol": "✦",  "label": "STA"},
+    "damage":  {"color": (220, 60, 60),  "symbol": "DMG", "label": "DMG"},
+    "speed":   {"color": (60, 200, 220), "symbol": "SPD", "label": "SPD"},
+    "health":  {"color": (60, 200, 80),  "symbol": "HP",  "label": "HP"},
+    "stamina": {"color": (80, 120, 255), "symbol": "STA", "label": "STA"},
 }
 
 class PowerUp(pygame.sprite.Sprite):
@@ -219,9 +219,9 @@ class PowerUp(pygame.sprite.Sprite):
         self.rect  = self.image.get_rect(center=self.rect.center)
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 #  COFFRE
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 
 class Chest(pygame.sprite.Sprite):
     W, H = 64, 52
@@ -261,9 +261,9 @@ class Chest(pygame.sprite.Sprite):
     def update(self, *args):
         if not self.opened:
             self._pulse += 1
-            # Légère pulsation de bordure
+            # Legere pulsation de bordure
             if self._pulse % 60 == 0:
-                pass  # pourrait ajouter un glow animé
+                pass  # pourrait ajouter un glow anime
 
     def check_interaction(self, player_rect) -> bool:
         return not self.opened and self.rect.inflate(50, 50).colliderect(player_rect)

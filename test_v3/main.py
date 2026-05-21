@@ -1,25 +1,25 @@
 # -*- coding: utf-8 -*-
-# main.py - Mobius Roguelike — Orchestrateur principal + menus multijoueur EN LIGNE
+# main.py - Mobius Roguelike - Orchestrateur principal + menus multijoueur EN LIGNE
 
 """
-FLUX DU JEU (états)
-═══════════════════════════════════════════════════════════════════════════════
-  MAIN_MENU         → Titre : Jouer / Quitter
-        ↓ "Jouer"
-  MODE_SELECT       → Solo / Multijoueur en ligne
-        ├─ Solo           → CHARACTER_SELECT  → PLAYING
-        └─ Multijoueur    → ONLINE_MENU
-                               ├─ Héberger  → WAITING_CLIENT → CHARACTER_SELECT → PLAYING (host)
-                               └─ Rejoindre → IP_INPUT       → CONNECTING       → PLAYING (client)
+FLUX DU JEU (etats)
+===============================================================================
+  MAIN_MENU         -> Titre : Jouer / Quitter
+        v "Jouer"
+  MODE_SELECT       -> Solo / Multijoueur en ligne
+        |-- Solo           -> CHARACTER_SELECT  -> PLAYING
+        `-- Multijoueur    -> ONLINE_MENU
+                               |-- Heberger  -> WAITING_CLIENT -> CHARACTER_SELECT -> PLAYING (host)
+                               `-- Rejoindre -> IP_INPUT       -> CONNECTING       -> PLAYING (client)
 
-CONTRÔLES
-  P1 (host) : ZQSD · Clic gauche · ESPACE (dash) · F (skill) · E (coffre) · 1/2 (arme)
-  P2 (client) : MÊMES touches que P1 (chacun joue sur son propre PC)
+CONTROLES
+  P1 (host) : ZQSD  -  Clic gauche  -  ESPACE (dash)  -  F (skill)  -  E (coffre)  -  1/2 (arme)
+  P2 (client) : MEMES touches que P1 (chacun joue sur son propre PC)
 
-RÉSEAU (voir core/network.py pour les détails)
-  - Protocole UDP, port 55 555 par défaut
-  - Le HOST est le serveur autoritaire : il simule tout et envoie l'état au client
-  - Le CLIENT envoie ses inputs et reçoit l'état complet pour l'afficher
+RESEAU (voir core/network.py pour les details)
+  - Protocole UDP, port 55 555 par defaut
+  - Le HOST est le serveur autoritaire : il simule tout et envoie l'etat au client
+  - Le CLIENT envoie ses inputs et recoit l'etat complet pour l'afficher
   - Ouvrir le port 55555 UDP dans le pare-feu et sur le routeur pour jouer sur internet
 """
 
@@ -42,25 +42,25 @@ from epoques.contemporain  import ContemporainRoom
 from epoques.futuristique  import FuturistiqueRoom
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  ÉTATS ADDITIONNELS DU JEU
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
+#  ETATS ADDITIONNELS DU JEU
+# ==============================================================================
 
-MAIN_MENU        = 3   # Écran titre
+MAIN_MENU        = 3   # Ecran titre
 MODE_SELECT      = 5   # Solo ou Multijoueur en ligne
-ONLINE_MENU      = 6   # Héberger ou Rejoindre
+ONLINE_MENU      = 6   # Heberger ou Rejoindre
 IP_INPUT         = 7   # Saisie de l'adresse IP du host
 WAITING_CLIENT   = 8   # Host attend la connexion de P2
 CONNECTING       = 9   # Client tente de se connecter au host
-CHARACTER_SELECT = 4   # Sélection de classe
+CHARACTER_SELECT = 4   # Selection de classe
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 #  SLIDER VOLUME
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 
 class VolumeSlider:
-    """Slider de volume glissable affiché en haut à gauche de tous les menus."""
+    """Slider de volume glissable affiche en haut a gauche de tous les menus."""
     W, H, X, Y, KR = 180, 8, 22, 28, 9
 
     def __init__(self):
@@ -97,9 +97,9 @@ class VolumeSlider:
         pygame.draw.circle(surface, (80, 160, 255),  (kx, ky), self.KR, 2)
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  HELPERS DE DESSIN (boutons réutilisables)
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
+#  HELPERS DE DESSIN (boutons reutilisables)
+# ==============================================================================
 
 def draw_button(surface, rect, text, hover, font,
                 col_hover=(80,80,200), col_norm=(40,40,130)):
@@ -133,7 +133,7 @@ def draw_particles(surface, particles, w, h):
         surface.blit(ps, (int(p["x"])-p["r"], int(p["y"])-p["r"]))
 
 def make_particles(n, w, h):
-    """Génère n particules flottantes aléatoires."""
+    """Genere n particules flottantes aleatoires."""
     return [{"x": random.uniform(0,w), "y": random.uniform(0,h),
              "vx": random.uniform(-0.3,0.3), "vy": random.uniform(-0.5,-0.1),
              "r": random.randint(2,5), "alpha": random.randint(50,160)}
@@ -152,12 +152,12 @@ def load_optional_scaled_image(path_parts, size=None, alpha=True):
         return None
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  ÉCRAN TITRE PRINCIPAL
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
+#  ECRAN TITRE PRINCIPAL
+# ==============================================================================
 
 class MainMenuRenderer:
-    """Écran titre avec logo MOBIUS animé + boutons Nouvelle Partie / Quitter."""
+    """Ecran titre avec logo MOBIUS anime + boutons Nouvelle Partie / Quitter."""
     BTN_W, BTN_H = 300, 60
 
     def __init__(self, w, h, bg):
@@ -186,7 +186,7 @@ class MainMenuRenderer:
         draw_bg_overlay(surface, self.bg, self.w, self.h)
         draw_particles(surface, self._particles, self.w, self.h)
 
-        # Logo animé
+        # Logo anime
         ty = int(self.h//2 - 220 + math.sin(self._timer*0.02)*5)
         sub = self.font_lg.render("R O G U E L I K E", True, (160,200,255))
         if self.logo:
@@ -211,23 +211,23 @@ class MainMenuRenderer:
         draw_button(surface, self.get_quit_rect(), "Quitter",
                     self.get_quit_rect().collidepoint(mouse), self.font_md)
 
-        hint = self.font_sm.render("Entrée = Jouer  ·  ESC = Quitter", True, (90,110,150))
+        hint = self.font_sm.render("Entree = Jouer   -   ESC = Quitter", True, (90,110,150))
         surface.blit(hint, (self.w//2-hint.get_width()//2, self.h-42))
         ei = self.font_sm.render(
-            "6 ÉPOQUES  ·  Préhistoire → Grèce → Edo → Moderne → WW2 → Futur",
+            "6 EPOQUES   -   Prehistoire -> Grece -> Edo -> Moderne -> WW2 -> Futur",
             True, (80,100,140))
         surface.blit(ei, (self.w//2-ei.get_width()//2, self.h-64))
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  ÉCRAN SÉLECTION DU MODE (Solo / Multijoueur en ligne)
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
+#  ECRAN SELECTION DU MODE (Solo / Multijoueur en ligne)
+# ==============================================================================
 
 class ModeSelectRenderer:
     """
     Deux grandes cartes cliquables :
-      - SOLO         → mode classique un joueur
-      - EN LIGNE     → multijoueur via réseau (Host ou Join)
+      - SOLO         -> mode classique un joueur
+      - EN LIGNE     -> multijoueur via reseau (Host ou Join)
     """
     CARD_W, CARD_H = 320, 360
     SPACING        = 80
@@ -245,7 +245,7 @@ class ModeSelectRenderer:
         self._c_online  = self._build_card_online()
 
     def _card_base(self, grad_a, grad_b, border_col):
-        """Surface de base pour une carte avec dégradé."""
+        """Surface de base pour une carte avec degrade."""
         w, h = self.CARD_W, self.CARD_H
         surf = pygame.Surface((w, h), pygame.SRCALPHA)
         for y in range(h):
@@ -260,7 +260,7 @@ class ModeSelectRenderer:
     def _build_card_solo(self):
         surf = self._card_base((60,20,120), (20,10,60), (120,80,255))
         cx   = self.CARD_W // 2
-        # Icône joueur
+        # Icone joueur
         pygame.draw.circle(surf, (180,140,255), (cx, 110), 45)
         pygame.draw.circle(surf, (120,80,220),  (cx, 110), 45, 3)
         fi = pygame.font.Font(None, 70)
@@ -271,13 +271,13 @@ class ModeSelectRenderer:
         nt = fn.render("SOLO", True, WHITE)
         surf.blit(nt, (cx-nt.get_width()//2, 172))
         fd = pygame.font.Font(None, 22)
-        sub = fd.render("Un joueur · Clavier + Souris", True, (200,180,255))
+        sub = fd.render("Un joueur  -  Clavier + Souris", True, (200,180,255))
         surf.blit(sub, (cx-sub.get_width()//2, 210))
         pygame.draw.line(surf, (120,80,200,150), (30,240), (self.CARD_W-30,240), 1)
-        for i, line in enumerate(["ZQSD : Déplacement",
+        for i, line in enumerate(["ZQSD : Deplacement",
                                    "Clic gauche : Tirer",
                                    "ESPACE : Dash",
-                                   "F : Compétence / E : Coffre"]):
+                                   "F : Competence / E : Coffre"]):
             t = fd.render(line, True, (200,200,220))
             surf.blit(t, (cx-t.get_width()//2, 252+i*20))
         fk = pygame.font.Font(None, 20)
@@ -288,7 +288,7 @@ class ModeSelectRenderer:
     def _build_card_online(self):
         surf = self._card_base((10,60,140), (5,20,60), (60,160,255))
         cx   = self.CARD_W // 2
-        # Icône réseau (deux cercles + ligne)
+        # Icone reseau (deux cercles + ligne)
         pygame.draw.circle(surf, (180,100,255), (cx-30, 110), 28)
         pygame.draw.circle(surf, (60,160,255),  (cx+30, 110), 28)
         pygame.draw.line(surf, (200,200,255), (cx-2,110), (cx+2,110), 3)
@@ -305,10 +305,10 @@ class ModeSelectRenderer:
         nt = fn.render("EN LIGNE", True, WHITE)
         surf.blit(nt, (cx-nt.get_width()//2, 172))
         fd = pygame.font.Font(None, 22)
-        sub = fd.render("Co-op 2 joueurs · Réseau local ou internet", True, (160,220,255))
+        sub = fd.render("Co-op 2 joueurs  -  Reseau local ou internet", True, (160,220,255))
         surf.blit(sub, (cx-sub.get_width()//2, 210))
         pygame.draw.line(surf, (60,140,200,150), (30,240), (self.CARD_W-30,240), 1)
-        for i, line in enumerate(["Héberger : vous êtes le serveur",
+        for i, line in enumerate(["Heberger : vous etes le serveur",
                                    "Rejoindre : entrez l'IP du host",
                                    "Port UDP 55555 (ouvrir le pare-feu)",
                                    "Fonctionne en LAN et sur internet"]):
@@ -362,19 +362,19 @@ class ModeSelectRenderer:
                 pygame.draw.rect(surface, (100,180,255),
                                  (rect.x, draw_y, self.CARD_W, self.CARD_H), 3, border_radius=16)
 
-        inst = self.font_sm.render("1=Solo · 2=En ligne · ESC=retour", True, (140,140,160))
+        inst = self.font_sm.render("1=Solo  -  2=En ligne  -  ESC=retour", True, (140,140,160))
         surface.blit(inst, (self.w//2-inst.get_width()//2, self.h-36))
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  ÉCRAN MULTIJOUEUR EN LIGNE (Héberger / Rejoindre)
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
+#  ECRAN MULTIJOUEUR EN LIGNE (Heberger / Rejoindre)
+# ==============================================================================
 
 class OnlineMenuRenderer:
     """
     Sous-menu multijoueur avec deux options :
-      - Héberger  : crée le serveur, affiche l'IP locale à communiquer à P2
-      - Rejoindre : passe à l'écran de saisie d'IP
+      - Heberger  : cree le serveur, affiche l'IP locale a communiquer a P2
+      - Rejoindre : passe a l'ecran de saisie d'IP
     """
     BTN_W, BTN_H = 340, 64
 
@@ -387,7 +387,7 @@ class OnlineMenuRenderer:
         self.font_sm    = pygame.font.Font(None, 22)
         self._timer     = 0
         self._particles = make_particles(35, w, h)
-        # IP locale récupérée une seule fois (appel réseau rapide)
+        # IP locale recuperee une seule fois (appel reseau rapide)
         self._local_ip  = get_local_ip()
 
     def _btn(self, i):
@@ -411,14 +411,14 @@ class OnlineMenuRenderer:
         surface.blit(title, (self.w//2-title.get_width()//2, ty))
         surface.blit(sub,   (self.w//2-sub.get_width()//2,   ty+title.get_height()+6))
 
-        # IP locale (utile si on héberge)
+        # IP locale (utile si on heberge)
         ip_txt = self.font_sm.render(
-            f"Votre IP locale : {self._local_ip}  (à communiquer à P2 si vous hébergez)",
+            f"Votre IP locale : {self._local_ip}  (a communiquer a P2 si vous hebergez)",
             True, (140,200,140))
         surface.blit(ip_txt, (self.w//2-ip_txt.get_width()//2, ty+title.get_height()+sub.get_height()+18))
 
         # Boutons
-        draw_button(surface, self.get_host_rect(), "Héberger la partie",
+        draw_button(surface, self.get_host_rect(), "Heberger la partie",
                     self.get_host_rect().collidepoint(mouse), self.font_md,
                     col_hover=(40,120,60), col_norm=(20,60,30))
         draw_button(surface, self.get_join_rect(), "Rejoindre une partie",
@@ -434,19 +434,19 @@ class OnlineMenuRenderer:
             True, (180,160,80))
         surface.blit(note, (self.w//2-note.get_width()//2, self.h-42))
         port_note = self.font_sm.render(
-            f"Port par défaut : {DEFAULT_PORT}",
+            f"Port par defaut : {DEFAULT_PORT}",
             True, (120,120,140))
         surface.blit(port_note, (self.w//2-port_note.get_width()//2, self.h-22))
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  ÉCRAN SAISIE D'IP (pour rejoindre)
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
+#  ECRAN SAISIE D'IP (pour rejoindre)
+# ==============================================================================
 
 class IPInputRenderer:
     """
-    Écran de saisie de l'adresse IP du serveur host.
-    Gère la saisie clavier (chiffres, points, backspace).
+    Ecran de saisie de l'adresse IP du serveur host.
+    Gere la saisie clavier (chiffres, points, backspace).
     Affiche les erreurs de format.
     """
     BTN_W, BTN_H = 240, 56
@@ -463,7 +463,7 @@ class IPInputRenderer:
         self._particles = make_particles(30, w, h)
 
         self.ip_text    = ""    # Texte saisi par l'utilisateur
-        self.error_msg  = ""    # Message d'erreur affiché sous le champ
+        self.error_msg  = ""    # Message d'erreur affiche sous le champ
 
     def get_connect_rect(self):
         return pygame.Rect(self.w//2 - self.BTN_W//2,
@@ -475,10 +475,10 @@ class IPInputRenderer:
 
     def handle_keydown(self, event) -> str | None:
         """
-        Traite un événement KEYDOWN pour la saisie d'IP.
+        Traite un evenement KEYDOWN pour la saisie d'IP.
         Retourne :
-          "connect" si ENTRÉE est pressée (IP potentiellement valide)
-          "back"    si ÉCHAP est pressé
+          "connect" si ENTREE est pressee (IP potentiellement valide)
+          "back"    si ECHAP est presse
           None      sinon
         """
         if event.key == pygame.K_ESCAPE:
@@ -497,8 +497,8 @@ class IPInputRenderer:
 
     def validate_ip(self) -> bool:
         """
-        Vérifie que l'IP saisie a un format IPv4 basique.
-        Ne valide pas la joignabilité (ça sera détecté à la connexion).
+        Verifie que l'IP saisie a un format IPv4 basique.
+        Ne valide pas la joignabilite (ca sera detecte a la connexion).
         """
         parts = self.ip_text.strip().split(".")
         if len(parts) != 4:
@@ -508,10 +508,10 @@ class IPInputRenderer:
             try:
                 v = int(p)
                 if not (0 <= v <= 255):
-                    self.error_msg = "Chaque partie doit être entre 0 et 255"
+                    self.error_msg = "Chaque partie doit etre entre 0 et 255"
                     return False
             except ValueError:
-                self.error_msg = "Chiffres uniquement séparés par des points"
+                self.error_msg = "Chiffres uniquement separes par des points"
                 return False
         return True
 
@@ -561,21 +561,21 @@ class IPInputRenderer:
 
         # Aide saisie
         note = self.font_sm.render(
-            "Tapez l'adresse IP du host - Entrée pour valider - ESC pour annuler",
+            "Tapez l'adresse IP du host - Entree pour valider - ESC pour annuler",
             True, (120,140,160))
         surface.blit(note, (self.w//2-note.get_width()//2, self.h-36))
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  ÉCRAN D'ATTENTE / CONNEXION (Host attend P2, Client se connecte)
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
+#  ECRAN D'ATTENTE / CONNEXION (Host attend P2, Client se connecte)
+# ==============================================================================
 
 class WaitingRenderer:
     """
-    Écran générique d'attente/connexion affiché :
-      - Côté host   : "En attente de P2..."
-      - Côté client : "Connexion en cours..."
-    Affiche un spinner animé + l'IP concernée.
+    Ecran generique d'attente/connexion affiche :
+      - Cote host   : "En attente de P2..."
+      - Cote client : "Connexion en cours..."
+    Affiche un spinner anime + l'IP concernee.
     Bouton Annuler pour interrompre.
     """
     BTN_W, BTN_H = 200, 50
@@ -593,16 +593,16 @@ class WaitingRenderer:
 
     def draw(self, surface, title_text: str, info_lines: list[str]):
         """
-        title_text : str → titre principal (ex: "En attente de P2...")
-        info_lines : list[str] → lignes d'info sous le titre
+        title_text : str -> titre principal (ex: "En attente de P2...")
+        info_lines : list[str] -> lignes d'info sous le titre
         """
         self._timer += 1
         mouse = pygame.mouse.get_pos()
         draw_bg_overlay(surface, self.bg, self.w, self.h, alpha=190)
 
-        # Spinner animé (arc tournant)
+        # Spinner anime (arc tournant)
         cx, cy = self.w//2, self.h//2 - 20
-        angle  = self._timer * 6   # Tourne de 6° par frame
+        angle  = self._timer * 6   # Tourne de 6 deg par frame
         pygame.draw.arc(surface, (80, 160, 255),
                         (cx-40, cy-40, 80, 80),
                         math.radians(angle), math.radians(angle+270), 5)
@@ -625,14 +625,14 @@ class WaitingRenderer:
                     col_hover=(140,40,40), col_norm=(80,20,20))
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  ÉCRAN SÉLECTION DE CLASSE
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
+#  ECRAN SELECTION DE CLASSE
+# ==============================================================================
 
 class MenuRenderer:
     """
-    Sélection de classe pour un joueur (solo ou réseau).
-    Identique à l'original — pas de sélection double ici
+    Selection de classe pour un joueur (solo ou reseau).
+    Identique a l'original - pas de selection double ici
     (chaque PC choisit sa propre classe dans le menu multijoueur).
     """
     CARD_W, CARD_H = 210, 280
@@ -694,20 +694,20 @@ class MenuRenderer:
 
     def get_card_rects(self) -> dict:
         keys    = list(SKILLS.keys())
-        # Espacement entre les cartes augmenté (24 → 44) pour aérer le menu.
-        # Le calcul centre automatiquement l'ensemble sur la largeur de l'écran.
+        # Espacement entre les cartes augmente (24 -> 44) pour aerer le menu.
+        # Le calcul centre automatiquement l'ensemble sur la largeur de l'ecran.
         spacing = 44
         total_w = len(keys)*self.CARD_W + (len(keys)-1)*spacing
         sx      = (self.w - total_w) // 2
-        # Légèrement plus bas (+40 → +60) pour laisser respirer le titre
+        # Legerement plus bas (+40 -> +60) pour laisser respirer le titre
         y       = self.h//2 - self.CARD_H//2 + 60
         return {k: pygame.Rect(sx+i*(self.CARD_W+spacing), y, self.CARD_W, self.CARD_H)
                 for i, k in enumerate(keys)}
 
     def draw(self, surface, selected_skill=None, mode_label=""):
         """
-        mode_label : str → texte optionnel affiché sous le titre
-                           ex: "HOST — Choisissez votre classe" ou "CLIENT"
+        mode_label : str -> texte optionnel affiche sous le titre
+                           ex: "HOST - Choisissez votre classe" ou "CLIENT"
         """
         self._timer += 1
         mouse = pygame.mouse.get_pos()
@@ -758,12 +758,12 @@ class MenuRenderer:
         surface.blit(inst, (self.w//2-inst.get_width()//2, self.h-36))
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 #  GAME OVER
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 
 class GameOverRenderer:
-    """Écran de fin de partie avec stats (supporte solo et multijoueur)."""
+    """Ecran de fin de partie avec stats (supporte solo et multijoueur)."""
 
     def __init__(self, w, h, bg):
         self.w, self.h = w, h
@@ -778,14 +778,14 @@ class GameOverRenderer:
             ("ui", "game_over", "defeat.png"), size=(560, 390)
         )
 
-    def draw(self, surface, player, epoch_key, victory=False):
+    def draw(self, surface, player, epoch_key, victory=False, replay_status=None, online=False):
         self._timer += 1
         surface.blit(self.bg, (0,0))
         ov = pygame.Surface((self.w, self.h), pygame.SRCALPHA)
         ov.fill((0,0,0,190)); surface.blit(ov, (0,0))
         cx, cy = self.w//2, self.h//2
         col, title_txt, sub_txt = (
-            (GOLD, "VICTOIRE !", "Vous avez traversé toutes les époques !")
+            (GOLD, "VICTOIRE !", "Vous avez traverse toutes les epoques !")
             if victory else (RED, "GAME OVER", "oh, oh... l'histoire s'arrete ici"))
         scale  = 1.0 + 0.03*math.sin(self._timer*0.1)
         art = self.victory_art if victory else self.defeat_art
@@ -812,9 +812,9 @@ class GameOverRenderer:
         if player:
             epoch_name = EPOCHS.get(epoch_key, {}).get("name", epoch_key)
             for i, (text, color) in enumerate([
-                (f"Époque : {epoch_name}", (180,200,255)),
-                (f"Ennemis éliminés : {player.kills}", WHITE),
-                (f"Pièces collectées : {player.coins}", GOLD),
+                (f"Epoque : {epoch_name}", (180,200,255)),
+                (f"Ennemis elimines : {player.kills}", WHITE),
+                (f"Pieces collectees : {player.coins}", GOLD),
             ]):
                 t = self.font_md.render(text, True, color)
                 surface.blit(t, (cx-t.get_width()//2, title_y + 140 + i*42))
@@ -824,17 +824,30 @@ class GameOverRenderer:
         panel_y = min(self.h - 90, title_y + 280)
         surface.blit(panel, (cx-250, panel_y))
         x_off = cx-220
-        for label, color in [("[R] Rejouer",WHITE),("[M] Menu",(160,200,255)),("[ESC] Quitter",(160,100,100))]:
+        replay_label = "[R] Voter pour rejouer" if online else "[R] Rejouer"
+        for label, color in [(replay_label,WHITE),("[M] Menu",(160,200,255)),("[ESC] Quitter",(160,100,100))]:
             t = self.font_md.render(label, True, color)
             surface.blit(t, (x_off, panel_y + 12)); x_off += 180
+        if online and replay_status:
+            status_y = panel_y + 68
+            host_ok = replay_status.get("host_vote", False)
+            client_ok = replay_status.get("client_vote", False)
+            lines = [
+                (f"P1: {'PRET' if host_ok else 'EN ATTENTE'}", GOLD if host_ok else WHITE),
+                (f"P2: {'PRET' if client_ok else 'EN ATTENTE'}", CYAN if client_ok else WHITE),
+                ("La partie redemarre quand les 2 joueurs ont vote.", (200, 200, 220)),
+            ]
+            for i, (text, color) in enumerate(lines):
+                t = self.font_md.render(text, True, color)
+                surface.blit(t, (cx - t.get_width()//2, status_y + i * 30))
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  TRANSITION D'ÉPOQUE
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
+#  TRANSITION D'EPOQUE
+# ==============================================================================
 
 class EpochTransition:
-    """Fondu noir entre deux époques avec affichage du nom."""
+    """Fondu noir entre deux epoques avec affichage du nom."""
 
     def __init__(self, w, h):
         self.w, self.h = w, h
@@ -878,16 +891,16 @@ class EpochTransition:
                                 self.h//2-txt.get_height()//2))
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  CLASSE GAME — ORCHESTRATEUR PRINCIPAL
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
+#  CLASSE GAME - ORCHESTRATEUR PRINCIPAL
+# ==============================================================================
 
 class Game:
     """
-    Orchestre le jeu : états, événements, boucle, transitions.
+    Orchestre le jeu : etats, evenements, boucle, transitions.
 
     MODES DE JEU
-    ─────────────────────────────────────────────────────────────────────────
+    -------------------------------------------------------------------------
     Solo   : self.net_mode = "solo"
              current_room.start(skill, mode="solo")
              rendu et logique 100% locaux
@@ -895,12 +908,12 @@ class Game:
     Host   : self.net_mode = "host"
              self.server = GameServer()  (socket UDP ouvert)
              current_room.start(skill, mode="server")
-             Chaque frame : server.poll() → apply_p2_inputs → update → serialize → server.send_state
+             Chaque frame : server.poll() -> apply_p2_inputs -> update -> serialize -> server.send_state
 
     Client : self.net_mode = "client"
              self.client = GameClient(ip)
-             Chaque frame : client.poll() → client.send_inputs → client_renderer.draw(state)
-             (pas de simulation locale, rendu pur à partir de l'état reçu)
+             Chaque frame : client.poll() -> client.send_inputs -> client_renderer.draw(state)
+             (pas de simulation locale, rendu pur a partir de l'etat recu)
     """
 
     def __init__(self):
@@ -910,7 +923,7 @@ class Game:
         self.clock  = pygame.time.Clock()
         sw, sh = SCREEN_WIDTH, SCREEN_HEIGHT
 
-        # ── Fond des menus ─────────────────────────────────────────────────────
+        # -- Fond des menus -----------------------------------------------------
         bg_renderer  = BackgroundRenderer(sw, sh)
         self.menu_bg = bg_renderer.get("futuristique")
         menu_bg = load_optional_scaled_image(
@@ -919,7 +932,7 @@ class Game:
         if menu_bg:
             self.menu_bg = menu_bg
 
-        # ── Renderers ─────────────────────────────────────────────────────────
+        # -- Renderers ---------------------------------------------------------
         self.main_menu_r   = MainMenuRenderer(sw, sh, self.menu_bg)
         self.mode_select_r = ModeSelectRenderer(sw, sh, self.menu_bg)
         self.online_menu_r = OnlineMenuRenderer(sw, sh, self.menu_bg)
@@ -929,31 +942,33 @@ class Game:
         self.gameover_r    = GameOverRenderer(sw, sh, self.menu_bg)
         self.transition    = EpochTransition(sw, sh)
         self.volume_slider = VolumeSlider()
-        # Renderer client (créé quand on joue côté client)
+        # Renderer client (cree quand on joue cote client)
         self.client_renderer: ClientRenderer | None = None
 
-        # ── État courant ───────────────────────────────────────────────────────
+        # -- Etat courant -------------------------------------------------------
         self.game_state     = MAIN_MENU
         self.selected_skill = None
         self.current_epoch  = "prehistoire"
         self.player_skill   = None
 
-        # ── Réseau ────────────────────────────────────────────────────────────
+        # -- Reseau ------------------------------------------------------------
         # net_mode : "solo" | "host" | "client"
         self.net_mode: str       = "solo"
         self.server:   GameServer | None = None   # Instance du serveur (host)
         self.client:   GameClient | None = None   # Instance du client
 
-        # Thread de connexion (utilisé pour connect sans bloquer l'UI)
+        # Thread de connexion (utilise pour connect sans bloquer l'UI)
         self._conn_thread: threading.Thread | None = None
         self._conn_error:  str = ""   # Message d'erreur de connexion
         self._conn_success: bool = False
         self._pending_skill: str = ""
         self._pending_ip:   str = ""
         self._conn_deadline: float = 0.0
-        self._local_ip_cache: str = get_local_ip()   # calculé une seule fois
+        self._local_ip_cache: str = get_local_ip()   # calcule une seule fois
+        self._host_replay_vote = False
+        self._client_replay_vote = False
 
-        # ── Salles ─────────────────────────────────────────────────────────────
+        # -- Salles -------------------------------------------------------------
         self.rooms: dict = {
             "prehistoire":  PrehistoireRoom(self),
             "grece":        GreceRoom(self),
@@ -964,49 +979,52 @@ class Game:
         }
         self.current_room = None
 
-    # ── Démarrage ─────────────────────────────────────────────────────────────
+    # -- Demarrage -------------------------------------------------------------
 
     def start_game(self, skill: str):
         """
-        Lance la partie dans le mode réseau courant (self.net_mode).
+        Lance la partie dans le mode reseau courant (self.net_mode).
 
-        Solo   : démarre normalement
-        Host   : démarre en mode "server", signal start au client
-        Client : ne démarre PAS de simulation locale (rendu pur via client_renderer)
+        Solo   : demarre normalement
+        Host   : demarre en mode "server", signal start au client
+        Client : ne demarre PAS de simulation locale (rendu pur via client_renderer)
         """
         self.player_skill  = skill
         self.current_epoch = "prehistoire"
         self.current_room  = self.rooms["prehistoire"]
+        self._host_replay_vote = False
+        self._client_replay_vote = False
 
         if self.net_mode == "solo":
-            # ── Solo : mode classique ──────────────────────────────────────────
+            # -- Solo : mode classique ------------------------------------------
             self.current_room.start(skill, mode="solo")
 
         elif self.net_mode == "host":
-            # ── Host : démarrer le serveur et la simulation ────────────────────
+            # -- Host : demarrer le serveur et la simulation --------------------
             p2_skill = self.server.p2_skill if self.server else "tank"
             self.current_room.start(skill, mode="server", skill2=p2_skill)
             # Signaler au client que la partie commence (lui envoyer la classe P1)
             if self.server:
+                self.server.reset_replay_votes()
                 self.server.send_start(skill)
 
         elif self.net_mode == "client":
-            # ── Client : pas de simulation, juste le renderer ─────────────────
-            # Le client n'appelle pas current_room.start() — tout vient du serveur
+            # -- Client : pas de simulation, juste le renderer -----------------
+            # Le client n'appelle pas current_room.start() - tout vient du serveur
             if self.client_renderer is None:
                 self.client_renderer = ClientRenderer(SCREEN_WIDTH, SCREEN_HEIGHT)
 
         self.game_state = PLAYING
 
     def change_epoch(self, next_epoch: str | None):
-        """Transition vers l'époque suivante (host uniquement)."""
+        """Transition vers l'epoque suivante (host uniquement)."""
         if next_epoch and next_epoch in self.rooms and next_epoch != "None":
             p = self.current_room.player
             stats = {"skill": p.skill, "kills": p.kills, "coins": p.coins,
                      "health": p.health, "max_health": p.max_health,
                      "stamina": p.stamina, "max_stamina": p.max_stamina}
 
-            # Stats P2 réseau (si présent côté host)
+            # Stats P2 reseau (si present cote host)
             p2_stats = None
             if self.net_mode == "host" and self.current_room.player2:
                 p2 = self.current_room.player2
@@ -1029,10 +1047,10 @@ class Game:
         else:
             self.game_state = GAME_OVER
 
-    # ── Fermeture propre du réseau ─────────────────────────────────────────────
+    # -- Fermeture propre du reseau ---------------------------------------------
 
     def _close_network(self):
-        """Ferme les sockets réseau proprement."""
+        """Ferme les sockets reseau proprement."""
         if self.server:
             self.server.close()
             self.server = None
@@ -1043,10 +1061,12 @@ class Game:
         self._conn_error = ""
         self._conn_success = False
         self._pending_skill = ""
+        self._host_replay_vote = False
+        self._client_replay_vote = False
         self._pending_ip = ""
         self._conn_deadline = 0.0
 
-    # ── Boucle principale ─────────────────────────────────────────────────────
+    # -- Boucle principale -----------------------------------------------------
 
     def run(self):
         running = True
@@ -1088,8 +1108,15 @@ class Game:
                 elif self.game_state == GAME_OVER:
                     if event.type == pygame.KEYDOWN:
                         if event.key == pygame.K_r:
-                            self._close_network()
-                            self.start_game(self.player_skill)
+                            if self.net_mode == "host" and self.server:
+                                self._host_replay_vote = True
+                                self.server.set_host_replay_vote(True)
+                            elif self.net_mode == "client" and self.client:
+                                self._client_replay_vote = True
+                                self.client.send_replay_vote(True)
+                            else:
+                                self._close_network()
+                                self.start_game(self.player_skill)
                         elif event.key == pygame.K_m:
                             self._close_network()
                             self.game_state = MAIN_MENU
@@ -1098,7 +1125,7 @@ class Game:
 
             self.volume_slider.update()
 
-            # ── CONNECTING : détecter connexion réussie ────────────────────────
+            # -- CONNECTING : detecter connexion reussie ------------------------
             if self.game_state == CONNECTING:
                 if self.client:
                     self.client.poll()
@@ -1109,35 +1136,49 @@ class Game:
                         self._conn_error = "ERREUR : Impossible de joindre le serveur (timeout)"
                         self.game_state = IP_INPUT
 
-            # ── PLAYING : logique réseau + update ──────────────────────────────
+            if self.game_state == GAME_OVER:
+                if self.net_mode == "host" and self.server:
+                    self.server.poll()
+                    self._host_replay_vote, self._client_replay_vote = self.server.get_replay_votes()
+                    if self.server.connected and self._host_replay_vote and self._client_replay_vote:
+                        self.server.send_replay_begin(self.player_skill)
+                        self.start_game(self.player_skill)
+                elif self.net_mode == "client" and self.client:
+                    self.client.poll()
+                    self._host_replay_vote = self.client.host_replay_vote
+                    self._client_replay_vote = self.client.client_replay_vote
+                    if self.client.consume_replay_begin():
+                        self.start_game(self.player_skill)
+
+            # -- PLAYING : logique reseau + update ------------------------------
             if self.game_state == PLAYING:
                 self.transition.update()
 
                 if self.net_mode == "host" and self.server:
                     # 1. Lire les paquets entrants du client
                     self.server.poll()
-                    # 2. Appliquer les inputs P2 reçus avant la simulation
+                    # 2. Appliquer les inputs P2 recus avant la simulation
                     inputs = self.server.get_client_inputs()
                     if self.current_room and self.current_room.player2:
                         self.current_room.apply_p2_network_inputs(inputs)
-                    # 3. Vérifier déconnexion client
+                    # 3. Verifier deconnexion client
                     if self.server.is_client_timeout(8.0):
-                        print("[HOST] Client déconnecté (timeout)")
+                        print("[HOST] Client deconnecte (timeout)")
                         self._close_network()
                         self.game_state = GAME_OVER
 
                 elif self.net_mode == "client" and self.client:
-                    # 1. Lire les paquets entrants (état du jeu)
+                    # 1. Lire les paquets entrants (etat du jeu)
                     self.client.poll()
                     # 2. Envoyer nos inputs au serveur
                     inputs = self._collect_client_inputs()
                     self.client.send_inputs(inputs)
-                    # 3. Vérifier si le serveur a signalé game over ou epoch change
+                    # 3. Verifier si le serveur a signale game over ou epoch change
                     state = self.client.get_state()
-                    if state.get("game_over"):
+                    if state.get("game_over") or state.get("go"):
                         self.game_state = GAME_OVER
                     if self.client.is_server_timeout(8.0):
-                        print("[CLIENT] Serveur déconnecté (timeout)")
+                        print("[CLIENT] Serveur deconnecte (timeout)")
                         self._close_network()
                         self.game_state = MAIN_MENU
 
@@ -1148,12 +1189,12 @@ class Game:
                         self.game_state = GAME_OVER
                     elif isinstance(result, str) and result.startswith("NEXT_EPOCH:"):
                         self.change_epoch(result.split(":")[1])
-                    # Côté host : envoyer l'état après update
+                    # Cote host : envoyer l'etat apres update
                     if self.net_mode == "host" and self.server and self.server.connected:
                         state = self.current_room.serialize_state()
                         self.server.send_state(state)
 
-            # ── Rendu ─────────────────────────────────────────────────────────
+            # -- Rendu ---------------------------------------------------------
             if self.game_state == MAIN_MENU:
                 self.main_menu_r.draw(self.screen)
                 self.volume_slider.draw(self.screen)
@@ -1170,13 +1211,13 @@ class Game:
                 # poll() ici pour recevoir le hello de P2
                 if self.server:
                     self.server.poll()
-                status = "Connecté !" if (self.server and self.server.connected) else "En attente..."
+                status = "Connecte !" if (self.server and self.server.connected) else "En attente..."
                 self.waiting_r.draw(self.screen,
                     "En attente de P2...",
                     [f"Votre IP : {self._local_ip_cache}",
                      f"Port UDP : {DEFAULT_PORT}",
-                     f"État : {status}",
-                     "Communiquez votre IP à P2"])
+                     f"Etat : {status}",
+                     "Communiquez votre IP a P2"])
                 self.volume_slider.draw(self.screen)
                 if self.server and self.server.connected:
                     self.game_state = CHARACTER_SELECT
@@ -1192,9 +1233,9 @@ class Game:
             elif self.game_state == CHARACTER_SELECT:
                 lbl = ""
                 if self.net_mode == "host":
-                    lbl = "HOST — Choisissez votre classe (P1)"
+                    lbl = "HOST - Choisissez votre classe (P1)"
                 elif self.net_mode == "client":
-                    lbl = "CLIENT — Choisissez votre classe (P2)"
+                    lbl = "CLIENT - Choisissez votre classe (P2)"
                 self.menu_r.draw(self.screen, self.selected_skill, mode_label=lbl)
                 self.volume_slider.draw(self.screen)
             elif self.game_state == PLAYING:
@@ -1205,19 +1246,27 @@ class Game:
                     else:
                         draw_bg_overlay(self.screen, self.menu_bg, SCREEN_WIDTH, SCREEN_HEIGHT, 200)
                         f = pygame.font.Font(None, 42)
-                        t = f.render("En attente de données du serveur...", True, WHITE)
+                        t = f.render("En attente de donnees du serveur...", True, WHITE)
                         self.screen.blit(t, (SCREEN_WIDTH//2-t.get_width()//2, SCREEN_HEIGHT//2))
                 else:
                     self.current_room.draw(self.screen)
                     self.transition.draw(self.screen)
             elif self.game_state == GAME_OVER:
                 p = None
+                replay_status = None
                 if self.net_mode == "client" and self.client:
                     state = self.client.get_state()
-                    # Pas d'objet Player côté client : afficher l'écran sans stats
+                    # Pas d'objet Player cote client : afficher l'ecran sans stats
                 elif self.current_room:
                     p = self.current_room.player
-                self.gameover_r.draw(self.screen, p, self.current_epoch)
+                if self.net_mode in ("host", "client"):
+                    replay_status = {
+                        "host_vote": self._host_replay_vote,
+                        "client_vote": self._client_replay_vote,
+                    }
+                self.gameover_r.draw(self.screen, p, self.current_epoch,
+                                     replay_status=replay_status,
+                                     online=(self.net_mode in ("host", "client")))
                 self.volume_slider.draw(self.screen)
 
             pygame.display.flip()
@@ -1226,21 +1275,21 @@ class Game:
         pygame.quit()
         sys.exit()
 
-    # ── Collecte des inputs P2 côté client ────────────────────────────────────
+    # -- Collecte des inputs P2 cote client ------------------------------------
 
     def _collect_client_inputs(self) -> dict:
         """
         Capture les inputs locaux du client (P2) et les formate pour l'envoi.
-        Appelé chaque frame côté client.
+        Appele chaque frame cote client.
 
-        Les contrôles de P2 (client) sont identiques à P1 (ZQSD + souris)
+        Les controles de P2 (client) sont identiques a P1 (ZQSD + souris)
         car chaque joueur joue sur son propre PC.
         """
         keys = pygame.key.get_pressed()
         mx, my = pygame.mouse.get_pos()
         mouse  = pygame.mouse.get_pressed()
 
-        # Direction de déplacement normalisée
+        # Direction de deplacement normalisee
         dx = dy = 0.0
         if keys[pygame.K_d]: dx += 1
         if keys[pygame.K_q] or keys[pygame.K_a]: dx -= 1
@@ -1264,7 +1313,7 @@ class Game:
             "weapon_idx": (1 if keys[pygame.K_2] else (0 if keys[pygame.K_1] else -1)),
         }
 
-    # ── Gestionnaires d'événements ────────────────────────────────────────────
+    # -- Gestionnaires d'evenements --------------------------------------------
 
     def _handle_main_menu(self, event, running) -> bool:
         if event.type == pygame.KEYDOWN:
@@ -1304,14 +1353,14 @@ class Game:
             mx, my = event.pos
             r = self.online_menu_r
             if r.get_host_rect().collidepoint(mx, my):
-                # ── Créer le serveur UDP ───────────────────────────────────────
+                # -- Creer le serveur UDP ---------------------------------------
                 try:
                     self.server   = GameServer(DEFAULT_PORT)
                     self.net_mode = "host"
                     self.game_state = WAITING_CLIENT
                 except OSError as e:
-                    print(f"[HOST] Erreur création serveur : {e}")
-                    # Afficher l'erreur dans l'écran waiting (provisoire)
+                    print(f"[HOST] Erreur creation serveur : {e}")
+                    # Afficher l'erreur dans l'ecran waiting (provisoire)
                     self._conn_error = f"Erreur : {e}"
             elif r.get_join_rect().collidepoint(mx, my):
                 self.ip_input_r.ip_text  = ""
@@ -1408,7 +1457,7 @@ class Game:
         return running
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 if __name__ == "__main__":
     game = Game()
     game.run()

@@ -4,18 +4,18 @@
 import pygame
 from pathlib import Path
 
-# ──────────────────────────────────────────────────
+# --------------------------------------------------
 #  CHEMINS
-# ──────────────────────────────────────────────────
+# --------------------------------------------------
 BASE_PATH   = Path(__file__).parent.parent
 ASSETS_PATH = BASE_PATH / "assets"
 
 def get_asset_path(*parts):
     return str(ASSETS_PATH / Path(*parts))
 
-# ──────────────────────────────────────────────────
-#  RÉSOLUTION  (récupérée dynamiquement)
-# ──────────────────────────────────────────────────
+# --------------------------------------------------
+#  RESOLUTION  (recuperee dynamiquement)
+# --------------------------------------------------
 _info = None
 def _get_info():
     global _info
@@ -27,7 +27,7 @@ def _get_info():
 def _w():  return _get_info().current_w
 def _h():  return _get_info().current_h
 
-# Accès direct (résolu à l'import si pygame déjà init, sinon appelé plus tard)
+# Acces direct (resolu a l'import si pygame deja init, sinon appele plus tard)
 try:
     pygame.display.init()
     _di = pygame.display.Info()
@@ -37,9 +37,9 @@ except Exception:
     SCREEN_WIDTH  = 1920
     SCREEN_HEIGHT = 1080
 
-# ──────────────────────────────────────────────────
+# --------------------------------------------------
 #  COULEURS
-# ──────────────────────────────────────────────────
+# --------------------------------------------------
 WHITE        = (255, 255, 255)
 BLACK        = (  0,   0,   0)
 RED          = (200,   0,   0)
@@ -61,24 +61,24 @@ DARK_GRAY    = ( 50,  50,  50)
 LIGHT_GRAY   = (200, 200, 200)
 PINK         = (255, 100, 150)
 
-# Couleurs d'époque
+# Couleurs d'epoque
 PREHISTOIRE_COLOR = (139,  69,  19)   # Brun
 GRECE_COLOR       = (200, 180,  80)   # Or grec
 EDO_COLOR         = (180,  30,  30)   # Rouge samourai
-MODERNE_COLOR     = (  0,  80, 160)   # Bleu napoléonien
+MODERNE_COLOR     = (  0,  80, 160)   # Bleu napoleonien
 CONTEMPORAIN_COLOR= ( 60,  80,  40)   # Vert militaire
-FUTURISTIQUE_COLOR= (  0, 220, 255)   # Cyan néon
+FUTURISTIQUE_COLOR= (  0, 220, 255)   # Cyan neon
 
-# ──────────────────────────────────────────────────
-#  ÉTATS DU JEU
-# ──────────────────────────────────────────────────
+# --------------------------------------------------
+#  ETATS DU JEU
+# --------------------------------------------------
 MENU      = 0
 PLAYING   = 1
 GAME_OVER = 2
 
-# ──────────────────────────────────────────────────
-#  PARAMÈTRES JOUEUR
-# ──────────────────────────────────────────────────
+# --------------------------------------------------
+#  PARAMETRES JOUEUR
+# --------------------------------------------------
 PLAYER_SIZE       = 80
 DASH_SPEED        = 20
 DASH_TIME         = 10
@@ -91,67 +91,67 @@ SIZE_RUSHER = 65
 SIZE_SNIPER = 85
 SIZE_BOSS   = 180
 
-# ──────────────────────────────────────────────────
-#  COMPÉTENCES (CLASSES)
-# ──────────────────────────────────────────────────
+# --------------------------------------------------
+#  COMPETENCES (CLASSES)
+# --------------------------------------------------
 SKILLS = {
     "tank": {
         "name": "Tank",
-        "desc": "150 PV · Vitesse -30%",
-        "special": "⚡ Bouclier -50% dégâts",
+        "desc": "150 PV  -  Vitesse -30%",
+        "special": "Special: Bouclier -50% degats",
         "color": DARK_BLUE,
         "icon_color": BLUE,
     },
     "berserker": {
         "name": "Berserker",
-        "desc": "80 PV · Vitesse +30%",
-        "special": "⚡ Rage ×2 dégâts 5s",
+        "desc": "80 PV  -  Vitesse +30%",
+        "special": "Special: Rage x2 degats 5s",
         "color": DARK_RED,
         "icon_color": RED,
     },
     "vampire": {
         "name": "Vampire",
         "desc": "Stats normales",
-        "special": "⚡ +10 PV/kill (10s)",
+        "special": "Special: +10 PV/kill (10s)",
         "color": (60, 0, 80),
         "icon_color": PURPLE,
     },
     "ninja": {
         "name": "Ninja",
-        "desc": "Vitesse +15% · Dash CD/2",
-        "special": "⚡ Téléportation curseur",
+        "desc": "Vitesse +15%  -  Dash CD/2",
+        "special": "Special: Teleportation curseur",
         "color": (20, 20, 20),
         "icon_color": CYAN,
     },
     "mage": {
         "name": "Mage",
-        "desc": "150 Stamina · +50% regen",
-        "special": "⚡ Nova de projectiles",
+        "desc": "150 Stamina  -  +50% regen",
+        "special": "Special: Nova de projectiles",
         "color": (10, 40, 70),
         "icon_color": CYAN,
     },
 }
 
-# ──────────────────────────────────────────────────
-#  ÉPOQUES
-# ──────────────────────────────────────────────────
+# --------------------------------------------------
+#  EPOQUES
+# --------------------------------------------------
 EPOCH_ORDER = ["prehistoire", "grece", "edo", "moderne", "contemporain", "futuristique"]
 
 EPOCHS = {
     "prehistoire": {
-        "name":        "Préhistoire",
-        "display":     "ÈRE PRÉHISTORIQUE",
+        "name":        "Prehistoire",
+        "display":     "ERE PREHISTORIQUE",
         "color":       PREHISTOIRE_COLOR,
         "bg_tint":     (80, 50, 20),
         "difficulty":  1.0,
         "next":        "grece",
         "weapons":     ["rock", "bone"],
         "enemy_tint":  (180, 120, 60),
-        "description": "L'ère des premiers hommes",
+        "description": "L'ere des premiers hommes",
     },
     "grece": {
-        "name":        "Grèce Antique",
-        "display":     "GRÈCE ANTIQUE",
+        "name":        "Grece Antique",
+        "display":     "GRECE ANTIQUE",
         "color":       GRECE_COLOR,
         "bg_tint":     (200, 180, 100),
         "difficulty":  1.3,
@@ -162,7 +162,7 @@ EPOCHS = {
     },
     "edo": {
         "name":        "Japon Edo",
-        "display":     "PÉRIODE EDO",
+        "display":     "PERIODE EDO",
         "color":       EDO_COLOR,
         "bg_tint":     (120, 20, 20),
         "difficulty":  1.6,
@@ -172,18 +172,18 @@ EPOCHS = {
         "description": "L'art du sabre et de la magie",
     },
     "moderne": {
-        "name":        "Ère Moderne",
-        "display":     "ÈRE MODERNE",
+        "name":        "Ere Moderne",
+        "display":     "ERE MODERNE",
         "color":       MODERNE_COLOR,
         "bg_tint":     (30, 60, 120),
         "difficulty":  2.0,
         "next":        "contemporain",
         "weapons":     ["rifle", "dagger"],
         "enemy_tint":  (80, 100, 180),
-        "description": "Guerres napoléoniennes",
+        "description": "Guerres napoleoniennes",
     },
     "contemporain": {
-        "name":        "Époque Contemporaine",
+        "name":        "Epoque Contemporaine",
         "display":     "GUERRE MONDIALE",
         "color":       CONTEMPORAIN_COLOR,
         "bg_tint":     (40, 60, 30),
@@ -195,22 +195,22 @@ EPOCHS = {
     },
     "futuristique": {
         "name":        "Futur",
-        "display":     "ÈRE FUTURISTE",
+        "display":     "ERE FUTURISTE",
         "color":       FUTURISTIQUE_COLOR,
         "bg_tint":     (0, 40, 80),
         "difficulty":  3.0,
         "next":        None,
         "weapons":     ["laser_pistol", "minigun"],
         "enemy_tint":  (0, 180, 220),
-        "description": "Robots et technologies avancées",
+        "description": "Robots et technologies avancees",
     },
 }
 
-# ──────────────────────────────────────────────────
-#  DONNÉES DES ARMES
-# ──────────────────────────────────────────────────
+# --------------------------------------------------
+#  DONNEES DES ARMES
+# --------------------------------------------------
 WEAPONS_DATA = {
-    # ── Préhistoire ──────────────────────────────
+    # -- Prehistoire ------------------------------
     "rock": {
         "name":              "Caillou",
         "sprite":            ("weapons", "caillou_dj_1.png"),
@@ -233,7 +233,7 @@ WEAPONS_DATA = {
         "range":             110,
         "size":              55,
     },
-    # ── Grèce ────────────────────────────────────
+    # -- Grece ------------------------------------
     "bow_shoot": {
         "name":              "Arc",
         "sprite":            ("sprites_final", "bow_shoot.png"),
@@ -246,7 +246,7 @@ WEAPONS_DATA = {
         "size":              60,
     },
     "skull": {
-        "name":              "Crâne",
+        "name":              "Crane",
         "sprite":            ("sprites_final", "bow_draw.png"),
         "fallback_color":    (220, 200, 180),
         "type":              "ranged",
@@ -256,7 +256,7 @@ WEAPONS_DATA = {
         "projectile_speed":  14,
         "size":              48,
     },
-    # ── Edo ──────────────────────────────────────
+    # -- Edo --------------------------------------
     "katana": {
         "name":              "Katana",
         "sprite":            ("sprites_final", "sword.png"),
@@ -279,7 +279,7 @@ WEAPONS_DATA = {
         "projectile_speed":  18,
         "size":              50,
     },
-    # ── Moderne ──────────────────────────────────
+    # -- Moderne ----------------------------------
     "rifle": {
         "name":              "Carabine",
         "sprite":            ("sprites_final", "rifle.png"),
@@ -302,7 +302,7 @@ WEAPONS_DATA = {
         "range":             100,
         "size":              50,
     },
-    # ── Contemporain ─────────────────────────────
+    # -- Contemporain -----------------------------
     "ak47": {
         "name":              "AK-47",
         "sprite":            ("sprites_final", "ak47.png"),
@@ -325,7 +325,7 @@ WEAPONS_DATA = {
         "projectile_speed":  12,
         "size":              40,
     },
-    # ── Futuristique ─────────────────────────────
+    # -- Futuristique -----------------------------
     "laser_pistol": {
         "name":              "Pistolet Laser",
         "sprite":            ("sprites_final", "laser_pistol.png"),
@@ -350,9 +350,9 @@ WEAPONS_DATA = {
     },
 }
 
-# ──────────────────────────────────────────────────
-#  DONNÉES DES ENNEMIS PAR ÉPOQUE
-# ──────────────────────────────────────────────────
+# --------------------------------------------------
+#  DONNEES DES ENNEMIS PAR EPOQUE
+# --------------------------------------------------
 ENEMY_CONFIG = {
     "prehistoire": {
         "tank":   {"health": 200, "speed": 2.5, "damage": 15, "size": 95},

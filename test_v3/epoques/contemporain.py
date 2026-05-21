@@ -2,11 +2,11 @@
 # epoques/contemporain.py
 
 """
-ÉPOQUE : CONTEMPORAIN (WW2)
+EPOQUE : CONTEMPORAIN (WW2)
 Personnage : Soldat WW2
-Armes     : AK-47 (distance) · Grenade (distance AOE)
-Thème     : Jungle, bunker, vert militaire
-Difficulté: ×2.5
+Armes     : AK-47 (distance)  -  Grenade (distance AOE)
+Theme     : Jungle, bunker, vert militaire
+Difficulte: x2.5
 """
 
 import pygame
@@ -30,13 +30,13 @@ class ContemporainRoom(BaseRoom):
         ]
 
     def on_enter(self):
-        print("💂 En avant soldats !")
+        print("En avant soldats !")
 
     def on_exit(self):
-        print("🏳 Victoire ! L'ennemi est vaincu !")
+        print("Victoire ! L'ennemi est vaincu !")
 
     def draw_epoch_decoration(self, surface):
-        # Pluie légère
+        # Pluie legere
         for drop in self._rain_drops:
             drop["y"] += drop["speed"]
             if drop["y"] > SCREEN_HEIGHT:

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-# core/base_room.py - Salle de base + joueur + ennemis + support réseau multijoueur
-# (voir commentaires détaillés dans network.py pour l'architecture réseau)
+# core/base_room.py - Salle de base + joueur + ennemis + support reseau multijoueur
+# (voir commentaires detailles dans network.py pour l'architecture reseau)
 
 import pygame, math, random
 from .constants  import *
@@ -9,22 +9,22 @@ from .graphics   import (SpriteCache, BackgroundRenderer, HUDRenderer,
                           draw_weapon_in_hand, draw_enemy_health_bar, tint_surface)
 from .mechanics  import Weapon, Bullet, MeleeAttack, EnemyBullet, PowerUp, Chest
 
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 #  JOUEUR
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 class Player(pygame.sprite.Sprite):
     """
-    Représente un joueur (P1 local ou P2 réseau côté serveur).
+    Represente un joueur (P1 local ou P2 reseau cote serveur).
 
-    En mode réseau côté serveur, P2 est une instance de Player dont
-    le déplacement est piloté par apply_network_inputs() + update_as_p2_server()
+    En mode reseau cote serveur, P2 est une instance de Player dont
+    le deplacement est pilote par apply_network_inputs() + update_as_p2_server()
     au lieu du clavier local.
 
-    MÉTHODES RÉSEAU :
+    METHODES RESEAU :
       apply_network_inputs(inputs, chests, float_texts, particles)
-        → Pose les flags internes depuis le dict inputs reçu du client
+        -> Pose les flags internes depuis le dict inputs recu du client
       update_as_p2_server()
-        → Appelle _handle_move_network() au lieu de _handle_move(keys)
+        -> Appelle _handle_move_network() au lieu de _handle_move(keys)
     """
     ANIM_FRAMES = {
         "idle": ["char_idle_one_arm"],
@@ -32,24 +32,25 @@ class Player(pygame.sprite.Sprite):
         "run":  ["char_run1_one_arm","char_run2_one_arm","char_run3_one_arm"],
     }
     SIZE = 80
+    REVIVE_HEALTH_RATIO = 0.4
 
     def __init__(self, skill=None, start_pos=None):
         super().__init__()
         self.skill = skill
 
-        # ── Stats de base ────────────────────────────────────────────────────
+        # -- Stats de base ----------------------------------------------------
         self.max_health = 100; self.health = 100
         self.max_stamina = 100; self.stamina = 100
         self.stamina_regen = 0.25
         self.speed = 7
         self.kills = 0; self.coins = 0
 
-        # ── Buffs de classe ───────────────────────────────────────────────────
+        # -- Buffs de classe ---------------------------------------------------
         if skill == "tank":     self.max_health = self.health = 150; self.speed = 5
         elif skill == "berserker": self.max_health = self.health = 80; self.speed = 9
         elif skill == "mage":   self.max_stamina = self.stamina = 150; self.stamina_regen = 0.35
 
-        # ── Dash ──────────────────────────────────────────────────────────────
+        # -- Dash --------------------------------------------------------------
         self.dashing = False; self.dash_time = 0; self.dash_cooldown = 0
         self._dash_cd_max = DASH_COOLDOWN // 2 if skill == "ninja" else DASH_COOLDOWN
         self.dir_x = self.dir_y = 0
@@ -57,16 +58,16 @@ class Player(pygame.sprite.Sprite):
         self.aim_x = 0
         self.aim_y = 0
 
-        # ── Compétence ────────────────────────────────────────────────────────
+        # -- Competence --------------------------------------------------------
         self.skill_cooldown = 0; self.skill_active = False; self.skill_duration = 0
 
-        # ── Boosts power-up ───────────────────────────────────────────────────
+        # -- Boosts power-up ---------------------------------------------------
         self.damage_boost = 1.0; self.speed_boost = 1.0; self.boost_timer = 0
 
-        # ── Armes ─────────────────────────────────────────────────────────────
+        # -- Armes -------------------------------------------------------------
         self.inventory = ["rock"]; self.current_weapon = Weapon("rock")
 
-        # ── Animation ─────────────────────────────────────────────────────────
+        # -- Animation ---------------------------------------------------------
         self._anim_cache = {}; self._anim_state = "idle"
         self._anim_frame = 0; self._anim_timer = 0; self._anim_speed = 8
         self._moving = False
@@ -82,21 +83,26 @@ class Player(pygame.sprite.Sprite):
         self.aim_x = self.rect.centerx + 100
         self.aim_y = self.rect.centery
 
-        # Groupes de sprites (injectés par BaseRoom.start())
+        # Groupes de sprites (injectes par BaseRoom.start())
         self._bullets = None; self._melee_attacks = None; self._all_sprites = None
 
-        # ── Flags réseau (utilisés uniquement pour P2 côté serveur) ──────────
-        # Ces flags sont posés par apply_network_inputs() et consommés dans
-        # _handle_move_network() → évite de traiter deux fois la même action
-        self._net_dash    = False   # Dash demandé par le client ce frame
-        self._net_skill   = False   # Skill demandée par le client ce frame
-        self._net_fire    = False   # Tir demandé par le client ce frame
-        self._net_fire_tx = 0       # Coordonnée X cible du tir
-        self._net_fire_ty = 0       # Coordonnée Y cible du tir
-        self._net_chest   = False   # Interaction coffre demandée
+        # -- Flags reseau (utilises uniquement pour P2 cote serveur) ----------
+        # Ces flags sont poses par apply_network_inputs() et consommes dans
+        # _handle_move_network() -> evite de traiter deux fois la meme action
+        self._net_dash    = False   # Dash demande par le client ce frame
+        self._net_skill   = False   # Skill demandee par le client ce frame
+        self._net_fire    = False   # Tir demande par le client ce frame
+        self._net_fire_tx = 0       # Coordonnee X cible du tir
+        self._net_fire_ty = 0       # Coordonnee Y cible du tir
+        self._net_chest   = False   # Interaction coffre demandee
+        self._net_interact = False
         self._network_controlled = False
 
-    # ── Sprites ───────────────────────────────────────────────────────────────
+        # -- KO / reanimation ------------------------------------------------
+        self.is_downed = False
+        self.revive_progress = 0
+
+    # -- Sprites ---------------------------------------------------------------
     def _load_sprites(self):
         cache = SpriteCache.get()
         for state, names in self.ANIM_FRAMES.items():
@@ -114,30 +120,36 @@ class Player(pygame.sprite.Sprite):
             img = pygame.transform.flip(img, True, False)
         return img
 
-    # ── Update standard (P1 local) ────────────────────────────────────────────
+    # -- Update standard (P1 local) --------------------------------------------
     def update(self, keys):
-        """Mise à jour standard du joueur local P1 (clavier+souris)."""
+        """Mise a jour standard du joueur local P1 (clavier+souris)."""
+        if self.is_downed:
+            self._update_downed_state()
+            return
         self._update_stamina(); self._update_timers()
         self._handle_move(keys); self._update_anim()
         self.current_weapon.update_cooldown()
 
-    # ── Update réseau (P2 côté serveur) ──────────────────────────────────────
+    # -- Update reseau (P2 cote serveur) --------------------------------------
     def update_as_p2_server(self):
         """
-        Variante de update() pour P2 côté serveur.
-        Lit les flags posés par apply_network_inputs() au lieu du clavier local.
-        À appeler APRÈS apply_network_inputs().
+        Variante de update() pour P2 cote serveur.
+        Lit les flags poses par apply_network_inputs() au lieu du clavier local.
+        A appeler APRES apply_network_inputs().
         """
+        if self.is_downed:
+            self._update_downed_state()
+            return
         self._update_stamina(); self._update_timers()
         self._handle_move_network(); self._update_anim()
         self.current_weapon.update_cooldown()
-        # Réinitialiser les flags à usage unique
+        # Reinitialiser les flags a usage unique
         self._net_dash = self._net_skill = self._net_fire = self._net_chest = False
 
     def apply_network_inputs(self, inputs: dict, chests=None,
                               float_texts=None, particles=None):
         """
-        Applique les inputs réseau du client P2 sur ce joueur (côté serveur).
+        Applique les inputs reseau du client P2 sur ce joueur (cote serveur).
         Pose les flags internes qui seront lus dans update_as_p2_server().
 
         inputs : dict {"dx":float, "dy":float, "dash":bool, "skill":bool,
@@ -145,16 +157,16 @@ class Player(pygame.sprite.Sprite):
                         "chest":bool, "weapon_idx":int}
         """
         if not inputs:
-            return  # Paquet perdu ce frame — garder l'ancienne direction
+            return  # Paquet perdu ce frame - garder l'ancienne direction
 
-        # Mouvement : mise à jour de la direction normalisée
+        # Mouvement : mise a jour de la direction normalisee
         dx = float(inputs.get('dx', 0.0))
         dy = float(inputs.get('dy', 0.0))
         if dx or dy:
             dist = math.hypot(dx, dy) or 1
             self.dir_x = dx / dist
             self.dir_y = dy / dist
-            self.facing_right = dx >= 0   # Orient selon la direction de déplacement
+            self.facing_right = dx >= 0   # Orient selon la direction de deplacement
         else:
             self.dir_x = 0
             self.dir_y = 0
@@ -163,18 +175,19 @@ class Player(pygame.sprite.Sprite):
         self.aim_y = int(inputs.get('aim_y', inputs.get('fire_ty', self.aim_y)))
         self.facing_right = self.aim_x >= self.rect.centerx
 
-        # Actions discrètes → flags consommés dans _handle_move_network()
+        # Actions discretes -> flags consommes dans _handle_move_network()
         if inputs.get('dash'):  self._net_dash  = True
         if inputs.get('skill'): self._net_skill = True
+        self._net_interact = bool(inputs.get('chest'))
         if inputs.get('fire') and not self._net_fire:
             self._net_fire = True
             self._net_fire_tx = int(inputs.get('fire_tx', self.rect.centerx + 100))
             self._net_fire_ty = int(inputs.get('fire_ty', self.rect.centery))
 
-        # Interaction coffre (événement discret, exécuté immédiatement)
+        # Interaction coffre (evenement discret, execute immediatement)
         if inputs.get('chest') and not self._net_chest:
             self._net_chest = True
-            if chests:
+            if chests and not self.is_downed:
                 for chest in chests:
                     if chest.check_interaction(self.rect):
                         if chest.open(self):
@@ -183,14 +196,14 @@ class Player(pygame.sprite.Sprite):
                                                 f"+ {chest.weapon_inside}!", GOLD)
                             break
 
-        # Changement d'arme (événement discret)
+        # Changement d'arme (evenement discret)
         widx = int(inputs.get('weapon_idx', -1))
         if 0 <= widx < len(self.inventory):
             self.change_weapon(self.inventory[widx])
 
-    # ── Déplacement réseau (P2 serveur) ──────────────────────────────────────
+    # -- Deplacement reseau (P2 serveur) --------------------------------------
     def _handle_move_network(self):
-        """Déplace P2 selon les flags réseau (pas le clavier)."""
+        """Deplace P2 selon les flags reseau (pas le clavier)."""
         if self.dashing:
             self._moving = True
             self.rect.x += self.dir_x * DASH_SPEED
@@ -215,9 +228,9 @@ class Player(pygame.sprite.Sprite):
         self.rect.clamp_ip(pygame.Rect(0,0,SCREEN_WIDTH,SCREEN_HEIGHT))
         self.hitbox.center = self.rect.center
 
-    # ── Déplacement local (P1) ────────────────────────────────────────────────
+    # -- Deplacement local (P1) ------------------------------------------------
     def _handle_move(self, keys):
-        """Déplacement de P1 via clavier ZQSD/WASD + ESPACE pour dash."""
+        """Deplacement de P1 via clavier ZQSD/WASD + ESPACE pour dash."""
         mx, _ = pygame.mouse.get_pos()
         _, my = pygame.mouse.get_pos()
         self.aim_x = mx
@@ -269,6 +282,9 @@ class Player(pygame.sprite.Sprite):
             if self.boost_timer == 0: self.damage_boost = self.speed_boost = 1.0
 
     def _update_anim(self):
+        if self.is_downed:
+            self._update_downed_state()
+            return
         move_strength = math.hypot(self.dir_x, self.dir_y) if self._moving else 0.0
         if self.dashing:
             move_strength = 1.35
@@ -289,9 +305,23 @@ class Player(pygame.sprite.Sprite):
             self._anim_frame = (self._anim_frame+1) % len(frames)
         self.image = self._get_frame()
 
-    # ── Attaque ───────────────────────────────────────────────────────────────
+    def _update_downed_state(self):
+        self.dashing = False
+        self._moving = False
+        self.dir_x = 0
+        self.dir_y = 0
+        self._anim_state = "idle"
+        self._visual_bob = 0.0
+        self._visual_tilt = 0.0
+        self._anim_frame = 0
+        self.image = self._get_frame()
+        self.hitbox.center = self.rect.center
+
+    # -- Attaque ---------------------------------------------------------------
     def attack(self, mx, my) -> bool:
-        """Lance une attaque (ranged→Bullet, melee→MeleeAttack). Retourne True si réussi."""
+        """Lance une attaque (ranged->Bullet, melee->MeleeAttack). Retourne True si reussi."""
+        if self.is_downed:
+            return False
         if not self.current_weapon.can_use(self.stamina): return False
         self.stamina -= self.current_weapon.stamina_cost
         self.current_weapon.use()
@@ -306,9 +336,11 @@ class Player(pygame.sprite.Sprite):
             if self._all_sprites is not None:   self._all_sprites.add(m)
         return True
 
-    # ── Compétence ────────────────────────────────────────────────────────────
+    # -- Competence ------------------------------------------------------------
     def use_skill(self) -> bool:
-        """Active la compétence de classe. Fonctionne identiquement pour P1 et P2."""
+        """Active la competence de classe. Fonctionne identiquement pour P1 et P2."""
+        if self.is_downed:
+            return False
         if self.skill_cooldown > 0 or not self.skill: return False
         if self.skill == "tank":
             self.skill_active=True; self.skill_duration=300; self.skill_cooldown=1800
@@ -317,7 +349,7 @@ class Player(pygame.sprite.Sprite):
         elif self.skill == "vampire":
             self.skill_active=True; self.skill_duration=600; self.skill_cooldown=900
         elif self.skill == "ninja":
-            # P1 : téléportation souris · P2 réseau : téléportation en avant
+            # P1 : teleportation souris  -  P2 reseau : teleportation en avant
             if self._network_controlled:
                 dist = 180
                 dx = self.dir_x if self.dir_x != 0 else (1 if self.facing_right else -1)
@@ -345,9 +377,30 @@ class Player(pygame.sprite.Sprite):
         if key not in self.inventory: self.inventory.append(key)
 
     def take_damage(self, amount):
+        if self.is_downed:
+            return
         if self.dashing: return
         if self.skill=="tank" and self.skill_active: amount *= 0.5
         self.health = max(0, self.health - amount)
+        if self.health <= 0:
+            self.enter_downed_state()
+
+    def enter_downed_state(self):
+        self.health = 0
+        self.is_downed = True
+        self.revive_progress = 0
+        self.dashing = False
+        self.skill_active = False
+        self.skill_duration = 0
+        self._update_downed_state()
+
+    def revive(self):
+        self.is_downed = False
+        self.revive_progress = 0
+        self.health = max(1, int(self.max_health * self.REVIVE_HEALTH_RATIO))
+        self.stamina = max(self.stamina, self.max_stamina * 0.35)
+        self._anim_state = "idle"
+        self.image = self._get_frame()
 
     def add_kill(self):
         self.kills += 1
@@ -362,12 +415,12 @@ class Player(pygame.sprite.Sprite):
         elif ptype=="stamina": self.max_stamina+=10; self.stamina=self.max_stamina
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 #  ENNEMIS
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 class Enemy(pygame.sprite.Sprite):
     """
-    Ennemi de base. En mode réseau serveur, player peut être [p1, p2].
+    Ennemi de base. En mode reseau serveur, player peut etre [p1, p2].
     L'ennemi cible alors le joueur vivant le plus proche chaque frame.
     """
     def __init__(self, player, epoch_key, enemy_type="rusher", sprite_path=None):
@@ -387,7 +440,7 @@ class Enemy(pygame.sprite.Sprite):
 
     def _get_nearest_player(self):
         """Retourne le joueur vivant le plus proche (crucial en multijoueur)."""
-        alive=[p for p in self._players if p.health > 0]
+        alive=[p for p in self._players if not getattr(p, "is_downed", False) and p.health > 0]
         if not alive: return self._players[0]
         return min(alive, key=lambda p: math.hypot(
             p.rect.centerx-self.rect.centerx, p.rect.centery-self.rect.centery))
@@ -525,25 +578,27 @@ class BossEnemy(Enemy):
         self.handle_collision()
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 #  SALLE DE BASE
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 class BaseRoom:
     """
-    Classe commune à toutes les salles (époques).
+    Classe commune a toutes les salles (epoques).
 
     MODES :
-      mode="solo"   → Partie solo classique (un seul joueur local)
-      mode="server" → Host multijoueur en ligne :
-                        P1 = joueur local, P2 = contrôlé via réseau
+      mode="solo"   -> Partie solo classique (un seul joueur local)
+      mode="server" -> Host multijoueur en ligne :
+                        P1 = joueur local, P2 = controle via reseau
                         Appeler apply_p2_network_inputs() puis update() puis serialize_state()
 
-    API RÉSEAU (mode="server") :
+    API RESEAU (mode="server") :
       room.apply_p2_network_inputs(inputs)  # Avant update()
       room.update()                          # Simulation
-      state = room.serialize_state()        # Après update(), à envoyer au client
+      state = room.serialize_state()        # Apres update(), a envoyer au client
     """
     WAVES_BEFORE_NEXT_EPOCH = 3
+    REVIVE_DISTANCE = 110
+    REVIVE_TIME = 90
 
     def __init__(self, game, epoch_key):
         self.game=game; self.epoch_key=epoch_key
@@ -571,15 +626,15 @@ class BaseRoom:
         self.player=None; self.player2=None
         self.mode="solo"; self._running=False
 
-    # ── Démarrage ─────────────────────────────────────────────────────────────
+    # -- Demarrage -------------------------------------------------------------
     def start(self, skill, player_stats=None, mode="solo", skill2=None, player2_stats=None):
         """
         Initialise la salle.
-        skill        : str  → classe P1
-        player_stats : dict → stats P1 à restaurer (transition d'époque)
-        mode         : str  → "solo" | "server"
-        skill2       : str  → classe P2 (None en solo)
-        player2_stats: dict → stats P2 à restaurer
+        skill        : str  -> classe P1
+        player_stats : dict -> stats P1 a restaurer (transition d'epoque)
+        mode         : str  -> "solo" | "server"
+        skill2       : str  -> classe P2 (None en solo)
+        player2_stats: dict -> stats P2 a restaurer
         """
         self.mode=mode
         self._network_game_over=False
@@ -591,7 +646,7 @@ class BaseRoom:
                     self.enemy_bullets,self.melee_attacks,self.chests,self.powerups]:
             grp.empty()
 
-        # Créer P1
+        # Creer P1
         p1_pos=(SCREEN_WIDTH//3,SCREEN_HEIGHT//2) if skill2 else (SCREEN_WIDTH//2,SCREEN_HEIGHT//2)
         self.player=Player(skill,start_pos=p1_pos)
         if player_stats: self._restore_stats(self.player,player_stats)
@@ -601,7 +656,7 @@ class BaseRoom:
         self.player.change_weapon(self.weapons[0])
         self.all_sprites.add(self.player)
 
-        # Créer P2 (mode server seulement)
+        # Creer P2 (mode server seulement)
         self.player2=None
         if mode=="server" and skill2:
             p2_pos=(SCREEN_WIDTH*2//3,SCREEN_HEIGHT//2)
@@ -617,7 +672,7 @@ class BaseRoom:
         self.wave=0; self._start_new_wave(); self._running=True; self.on_enter()
 
     def _restore_stats(self, player, stats):
-        """Restaure les stats d'un joueur depuis un dict (transition d'époque)."""
+        """Restaure les stats d'un joueur depuis un dict (transition d'epoque)."""
         player.kills=stats.get("kills",0); player.coins=stats.get("coins",0)
         player.health=stats.get("health",player.max_health)
         player.max_health=stats.get("max_health",player.max_health)
@@ -628,9 +683,9 @@ class BaseRoom:
     def on_exit(self):  pass
     def draw_epoch_decoration(self, surface): pass
 
-    # ── Vagues ────────────────────────────────────────────────────────────────
+    # -- Vagues ----------------------------------------------------------------
     def _start_new_wave(self):
-        """Démarre une nouvelle vague. En mode server, +20% d'ennemis pour le challenge."""
+        """Demarre une nouvelle vague. En mode server, +20% d'ennemis pour le challenge."""
         self.wave+=1; self.wave_complete=False; self.boss_spawned=False; self.spawn_timer=0
         if self.wave%3==0:
             self.boss_wave=True; self.enemies_this_wave=0
@@ -641,7 +696,7 @@ class BaseRoom:
             self.enemies_this_wave=base; self.enemies_spawned=0
 
     def _spawn_enemy(self):
-        """Crée un ennemi. En mode server, les ennemis ciblent le joueur le plus proche."""
+        """Cree un ennemi. En mode server, les ennemis ciblent le joueur le plus proche."""
         etype=random.choices(["rusher","tank","sniper"],weights=[45,25,30])[0]
         target=[self.player,self.player2] if (self.mode=="server" and self.player2) else self.player
         if etype=="tank":    e=TankEnemy(target,self.epoch_key)
@@ -659,11 +714,11 @@ class BaseRoom:
             ptype=random.choice(["damage","speed","health","stamina"])
             pu=PowerUp(x,y,ptype); self.powerups.add(pu); self.all_sprites.add(pu)
 
-    # ── API réseau ────────────────────────────────────────────────────────────
+    # -- API reseau ------------------------------------------------------------
     def apply_p2_network_inputs(self, inputs: dict):
         """
-        Applique les inputs réseau du client sur P2 côté serveur.
-        À appeler AVANT update() dans la boucle serveur.
+        Applique les inputs reseau du client sur P2 cote serveur.
+        A appeler AVANT update() dans la boucle serveur.
         Ne fait rien si mode!="server" ou player2 is None.
         """
         if self.mode!="server" or not self.player2: return
@@ -671,10 +726,76 @@ class BaseRoom:
                                            float_texts=self.float_texts,
                                            particles=self.particles)
 
+    def _players_can_revive(self, rescuer, target) -> bool:
+        return bool(
+            rescuer and target
+            and not rescuer.is_downed
+            and target.is_downed
+            and math.hypot(rescuer.rect.centerx - target.rect.centerx,
+                           rescuer.rect.centery - target.rect.centery) <= self.REVIVE_DISTANCE
+        )
+
+    def _try_open_chest_for_player(self, player, label_prefix=""):
+        if not player or player.is_downed:
+            return False
+        for chest in self.chests:
+            if chest.check_interaction(player.rect):
+                if chest.open(player):
+                    self.float_texts.add(player.rect.centerx, player.rect.top-20,
+                                         f"{label_prefix}+ {chest.weapon_inside}!", GOLD)
+                    self.show_chest_hint = False
+                    return True
+        return False
+
+    def _update_revive_state(self, p1_interact: bool):
+        if not self.player2:
+            return
+        p2_interact = bool(self.player2._net_interact)
+        can_p1_revive = self._players_can_revive(self.player, self.player2)
+        can_p2_revive = self._players_can_revive(self.player2, self.player)
+
+        if can_p1_revive and p1_interact:
+            self.player2.revive_progress = min(self.REVIVE_TIME, self.player2.revive_progress + 1)
+            if self.player2.revive_progress >= self.REVIVE_TIME:
+                self.player2.revive()
+                self.float_texts.add(self.player2.rect.centerx, self.player2.rect.top-34, "P2 REANIME", CYAN, 24)
+                self.particles.emit_magic(self.player2.rect.centerx, self.player2.rect.centery, CYAN, 16)
+        else:
+            self.player2.revive_progress = 0
+
+        if can_p2_revive and p2_interact:
+            self.player.revive_progress = min(self.REVIVE_TIME, self.player.revive_progress + 1)
+            if self.player.revive_progress >= self.REVIVE_TIME:
+                self.player.revive()
+                self.float_texts.add(self.player.rect.centerx, self.player.rect.top-34, "P1 REANIME", GOLD, 24)
+                self.particles.emit_magic(self.player.rect.centerx, self.player.rect.centery, GOLD, 16)
+        else:
+            self.player.revive_progress = 0
+
+    def _draw_revive_prompt(self, surface, target, ox, oy, label):
+        if not target or not target.is_downed:
+            return
+        font = pygame.font.Font(None, 24)
+        txt = font.render(label, True, WHITE)
+        tx = target.rect.centerx + ox - txt.get_width() // 2
+        ty = target.rect.top + oy - 34
+        bg = pygame.Surface((txt.get_width() + 10, txt.get_height() + 6), pygame.SRCALPHA)
+        bg.fill((0, 0, 0, 150))
+        surface.blit(bg, (tx - 5, ty - 3))
+        surface.blit(txt, (tx, ty))
+        if target.revive_progress > 0:
+            bw = 70
+            bx = target.rect.centerx + ox - bw // 2
+            by = ty - 12
+            pygame.draw.rect(surface, (40, 40, 40), (bx, by, bw, 7), border_radius=3)
+            fill = int(bw * (target.revive_progress / self.REVIVE_TIME))
+            pygame.draw.rect(surface, CYAN, (bx, by, fill, 7), border_radius=3)
+            pygame.draw.rect(surface, WHITE, (bx, by, bw, 7), 1, border_radius=3)
+
     def serialize_state(self) -> dict:
         """
-        Sérialise l'état complet du jeu en dict JSON-compatible.
-        À appeler APRÈS update() et envoyer via GameServer.send_state().
+        Serialise l'etat complet du jeu en dict JSON-compatible.
+        A appeler APRES update() et envoyer via GameServer.send_state().
         """
         self._network_frame += 1
         def sp(p):
@@ -684,7 +805,8 @@ class BaseRoom:
                     'k':p.kills,'c':p.coins,'fr':1 if p.facing_right else 0,
                     'ax':int(p.aim_x),'ay':int(p.aim_y),
                     'an':p._anim_state,'sk':p.skill,
-                    'w':p.current_weapon.key,'i':list(p.inventory)}
+                    'w':p.current_weapon.key,'i':list(p.inventory),
+                    'dn':1 if p.is_downed else 0,'rv':p.revive_progress}
         def se(e):
             return {'i':id(e),'x':e.rect.centerx,'y':e.rect.centery,
                     'h':int(e.health),'m':int(e.max_health),
@@ -705,9 +827,9 @@ class BaseRoom:
             'ch':[[c.rect.centerx,c.rect.centery,1 if c.opened else 0] for c in self.chests],
         }
 
-    # ── Événements (P1 local) ─────────────────────────────────────────────────
+    # -- Evenements (P1 local) -------------------------------------------------
     def handle_event(self, event):
-        """Gère les événements de P1 (valide en solo ET en mode server)."""
+        """Gere les evenements de P1 (valide en solo ET en mode server)."""
         if event.type==pygame.KEYDOWN:
             if event.key==pygame.K_ESCAPE: return "MENU"
             for i,wk in enumerate(self.player.inventory):
@@ -716,12 +838,8 @@ class BaseRoom:
                 if self.player.use_skill() and self.player.skill=="mage":
                     self.particles.emit_magic(self.player.rect.centerx,self.player.rect.centery,color=TEAL,count=20)
             if event.key==pygame.K_e:
-                for chest in self.chests:
-                    if chest.check_interaction(self.player.rect):
-                        if chest.open(self.player):
-                            self.float_texts.add(self.player.rect.centerx,self.player.rect.top-20,
-                                                  f"+ {chest.weapon_inside}!",GOLD)
-                            self.show_chest_hint=False
+                if not (self.player2 and self._players_can_revive(self.player, self.player2)):
+                    self._try_open_chest_for_player(self.player)
         elif event.type==pygame.MOUSEBUTTONDOWN and event.button==1:
             mx,my=pygame.mouse.get_pos()
             if self.player.attack(mx,my):
@@ -730,35 +848,37 @@ class BaseRoom:
                 elif self.player.current_weapon.key in ("magic_orb",): self.particles.emit_magic(mx,my,TEAL,6)
         return None
 
-    # ── Update ────────────────────────────────────────────────────────────────
+    # -- Update ----------------------------------------------------------------
     def update(self):
         """
-        Simulation principale (une frame). Appelée par Game.run().
-        En mode server : apply_p2_network_inputs() doit avoir été appelé AVANT.
+        Simulation principale (une frame). Appelee par Game.run().
+        En mode server : apply_p2_network_inputs() doit avoir ete appele AVANT.
         """
         self._network_game_over=False
         self._network_next_epoch=None
         self.objective_hint=""
 
-        p1_dead=self.player.health<=0
-        p2_dead=(self.player2 is None) or (self.player2.health<=0)
-        if p1_dead and p2_dead:
+        p1_downed=self.player.is_downed
+        p2_downed=(self.player2 is None) or self.player2.is_downed
+        if (self.mode != "server" and p1_downed) or (self.mode == "server" and p1_downed and p2_downed):
             self._network_game_over=True
             return True
 
         keys=pygame.key.get_pressed()
-        # Mettre à jour P1 (local)
+        p1_interact = bool(keys[pygame.K_e])
+        # Mettre a jour P1 (local)
         self.player.update(keys)
-        # Mettre à jour P2 réseau (flags posés par apply_p2_network_inputs)
+        # Mettre a jour P2 reseau (flags poses par apply_p2_network_inputs)
         if self.mode=="server" and self.player2:
             self.player2.update_as_p2_server()
+            self._update_revive_state(p1_interact)
 
-        # ── CORRECTIF ITERATION ───────────────────────────────────────────────
-        # On passe par list() pour créer un SNAPSHOT de all_sprites avant la
-        # boucle. Sans ça, quand Bullet.update() appelle self.kill() (hors écran),
-        # il modifie le dict interne du Group pendant l'itération → pygame saute
-        # silencieusement certains sprites → les bullets ne bougent pas →
-        # les collisions ne sont jamais détectées → ennemis invincibles.
+        # -- CORRECTIF ITERATION -----------------------------------------------
+        # On passe par list() pour creer un SNAPSHOT de all_sprites avant la
+        # boucle. Sans ca, quand Bullet.update() appelle self.kill() (hors ecran),
+        # il modifie le dict interne du Group pendant l'iteration -> pygame saute
+        # silencieusement certains sprites -> les bullets ne bougent pas ->
+        # les collisions ne sont jamais detectees -> ennemis invincibles.
         for sprite in list(self.all_sprites):
             if sprite is not self.player and sprite is not self.player2:
                 sprite.update(keys)
@@ -772,18 +892,18 @@ class BaseRoom:
                 self._spawn_enemy(); self.enemies_spawned+=1; self.spawn_timer=0
         if self.boss_wave and not self.boss_spawned: self._spawn_boss()
 
-        # ── CORRECTIF COLLISIONS : projectiles joueurs → ennemis ──────────────
+        # -- CORRECTIF COLLISIONS : projectiles joueurs -> ennemis --------------
         # On remplace groupcollide() par une boucle manuelle explicite.
-        # groupcollide() utilise la bounding box de l'image APRÈS rotation, qui
-        # peut être décalée/trop grande selon la version de pygame, ce qui cause
-        # des faux-négatifs (bullet visiblement sur l'ennemi mais rect décalé).
-        # La boucle manuelle utilise un rect centré sur la position réelle du
-        # bullet, indépendamment de la taille de l'image rotée.
-        dead_enemies = set()   # Ennemis tués ce frame (pour éviter les kills multiples)
+        # groupcollide() utilise la bounding box de l'image APRES rotation, qui
+        # peut etre decalee/trop grande selon la version de pygame, ce qui cause
+        # des faux-negatifs (bullet visiblement sur l'ennemi mais rect decale).
+        # La boucle manuelle utilise un rect centre sur la position reelle du
+        # bullet, independamment de la taille de l'image rotee.
+        dead_enemies = set()   # Ennemis tues ce frame (pour eviter les kills multiples)
         for bullet in list(self.bullets):
             bx, by = bullet.rect.centerx, bullet.rect.centery
-            # Hitbox du bullet : petit carré centré sur sa position réelle
-            # (indépendant de l'image rotée, plus fiable)
+            # Hitbox du bullet : petit carre centre sur sa position reelle
+            # (independant de l'image rotee, plus fiable)
             b_hit = pygame.Rect(0, 0, 16, 16)
             b_hit.center = (bx, by)
             bullet_killed = False
@@ -809,7 +929,7 @@ class BaseRoom:
                 if bullet_killed:
                     break
 
-        # Mêlée → ennemis (boucle manuelle aussi pour la même raison)
+        # Melee -> ennemis (boucle manuelle aussi pour la meme raison)
         for melee in list(self.melee_attacks):
             for enemy in list(self.enemies):
                 if enemy in dead_enemies:
@@ -829,7 +949,7 @@ class BaseRoom:
                         owner.add_kill()
                         enemy.kill()
 
-        # Balles ennemies → P1
+        # Balles ennemies -> P1
         if self.player.health>0:
             for b in pygame.sprite.spritecollide(self.player,self.enemy_bullets,True):
                 self.player.take_damage(b.damage)
@@ -837,21 +957,21 @@ class BaseRoom:
                 self.particles.emit_hit_spark(self.player.rect.centerx,self.player.rect.centery,RED,6)
                 self.screen_fx.flash(RED,7); self.screen_fx.shake(6,10)
 
-        # Balles ennemies → P2 réseau
+        # Balles ennemies -> P2 reseau
         if self.mode=="server" and self.player2 and self.player2.health>0:
             for b in pygame.sprite.spritecollide(self.player2,self.enemy_bullets,True):
                 self.player2.take_damage(b.damage)
                 self.float_texts.add_damage(self.player2.rect.centerx,self.player2.rect.top-20,int(b.damage))
                 self.particles.emit_hit_spark(self.player2.rect.centerx,self.player2.rect.centery,(80,160,255),5)
 
-        # Power-ups → P1
+        # Power-ups -> P1
         for pu in pygame.sprite.spritecollide(self.player,self.powerups,True):
             self.player.apply_powerup(pu.type)
             label={"damage":"+DMG","speed":"+SPD","health":"+HP","stamina":"+STA"}.get(pu.type,"?")
             col={"damage":RED,"speed":CYAN,"health":(60,220,80),"stamina":BLUE}.get(pu.type,WHITE)
             self.float_texts.add(self.player.rect.centerx,self.player.rect.top-30,label,col,22)
 
-        # Power-ups → P2 réseau
+        # Power-ups -> P2 reseau
         if self.mode=="server" and self.player2 and self.player2.health>0:
             for pu in pygame.sprite.spritecollide(self.player2,self.powerups,True):
                 self.player2.apply_powerup(pu.type)
@@ -898,9 +1018,9 @@ class BaseRoom:
                     self._start_new_wave()
         return None
 
-    # ── Draw ──────────────────────────────────────────────────────────────────
+    # -- Draw ------------------------------------------------------------------
     def draw(self, surface):
-        """Rendu de la scène (côté host, P1). En mode client, utiliser ClientRenderer."""
+        """Rendu de la scene (cote host, P1). En mode client, utiliser ClientRenderer."""
         ox,oy=self.screen_fx.offset
         bg=self.bg_renderer.get(self.epoch_key); surface.blit(bg,(ox,oy))
         for sprite in self.all_sprites:
@@ -909,8 +1029,8 @@ class BaseRoom:
             surface.blit(sprite.image,(sprite.rect.x+ox,sprite.rect.y+oy))
         if self.player:
             self._draw_player(surface, self.player, ox, oy)
-        # Arme P2 réseau (visible côté host)
-        if self.mode=="server" and self.player2 and self.player2.health>0:
+        # Arme P2 reseau (visible cote host)
+        if self.mode=="server" and self.player2 and (self.player2.health>0 or self.player2.is_downed):
             pr2=self._draw_player(surface, self.player2, ox, oy, tint=(80, 170, 255, 70))
             font_lbl=pygame.font.Font(None,22)
             lbl=font_lbl.render("P2",True,(120,200,255))
@@ -937,17 +1057,22 @@ class BaseRoom:
             font=pygame.font.Font(None,22)
             hint=font.render("1/2:Arme | F:Skill | ESC:Menu",True,LIGHT_GRAY)
             surface.blit(hint,(10,SCREEN_HEIGHT-28))
+        if self.mode=="server" and self.player2:
+            if self._players_can_revive(self.player, self.player2):
+                self._draw_revive_prompt(surface, self.player2, ox, oy, "Maintenir E pour reanimer P2")
+            if self._players_can_revive(self.player2, self.player):
+                self._draw_revive_prompt(surface, self.player, ox, oy, "P2 vous reanime")
 
     def _draw_p2_hud(self, surface):
-        """HUD de P2 réseau, affiché en bas à droite côté host."""
+        """HUD de P2 reseau, affiche en bas a droite cote host."""
         p2=self.player2; font=pygame.font.Font(None,22)
         PANEL_W,PANEL_H=210,70; px=SCREEN_WIDTH-PANEL_W-14; py=SCREEN_HEIGHT-PANEL_H-14
         bg=pygame.Surface((PANEL_W,PANEL_H),pygame.SRCALPHA); bg.fill((10,20,50,170))
         pygame.draw.rect(bg,(80,140,255),bg.get_rect(),2,border_radius=8); surface.blit(bg,(px,py))
-        if p2.health<=0:
-            t=font.render("P2 — KO",True,RED); surface.blit(t,(px+8,py+PANEL_H//2-t.get_height()//2)); return
+        if p2.is_downed or p2.health<=0:
+            t=font.render("P2 - KO",True,RED); surface.blit(t,(px+8,py+PANEL_H//2-t.get_height()//2)); return
         skill_name=SKILLS.get(p2.skill,{}).get("name","P2") if p2.skill else "P2"
-        surface.blit(font.render(f"P2 — {skill_name}",True,(150,200,255)),(px+6,py+6))
+        surface.blit(font.render(f"P2 - {skill_name}",True,(150,200,255)),(px+6,py+6))
         bw=PANEL_W-20; bx,by=px+10,py+28
         pygame.draw.rect(surface,(60,20,20),(bx,by,bw,12),border_radius=3)
         hp_r=max(0,p2.health/max(1,p2.max_health))
@@ -968,15 +1093,19 @@ class BaseRoom:
             overlay = pygame.Surface(img.get_size(), pygame.SRCALPHA)
             overlay.fill(tint)
             img.blit(overlay, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
-        if abs(player._visual_tilt) > 0.15:
+        if player.is_downed:
+            angle = 86 if player.facing_right else -86
+            img = pygame.transform.rotate(img, angle)
+        elif abs(player._visual_tilt) > 0.15:
             img = pygame.transform.rotate(img, player._visual_tilt)
         draw_rect = img.get_rect(center=(pr.centerx, pr.centery + int(player._visual_bob)))
         surface.blit(img, draw_rect)
-        draw_weapon_in_hand(
-            surface,
-            draw_rect,
-            player.current_weapon,
-            player.facing_right,
-            aim_pos=(player.aim_x + ox, player.aim_y + oy),
-        )
+        if not player.is_downed:
+            draw_weapon_in_hand(
+                surface,
+                draw_rect,
+                player.current_weapon,
+                player.facing_right,
+                aim_pos=(player.aim_x + ox, player.aim_y + oy),
+            )
         return draw_rect

@@ -2,11 +2,11 @@
 # epoques/edo.py
 
 """
-ÉPOQUE : JAPON EDO
-Personnage : Samouraï
-Armes     : Katana (mêlée) · Orbe Magique (distance)
-Thème     : Nuit japonaise, cerisiers, lune
-Difficulté: ×1.6
+EPOQUE : JAPON EDO
+Personnage : Samourai
+Armes     : Katana (melee)  -  Orbe Magique (distance)
+Theme     : Nuit japonaise, cerisiers, lune
+Difficulte: x1.6
 """
 
 import pygame
@@ -20,11 +20,11 @@ class EdoRoom(BaseRoom):
 
     def __init__(self, game):
         super().__init__(game, "edo")
-        self.epoch_name_display = "PÉRIODE EDO"
+        self.epoch_name_display = "PERIODE EDO"
         self.theme_color = EDO_COLOR
         self._petal_timer = 0
         self._petals = []
-        # Générer quelques pétales
+        # Generer quelques petales
         for _ in range(18):
             self._petals.append({
                 "x": random.uniform(0, SCREEN_WIDTH),
@@ -36,13 +36,13 @@ class EdoRoom(BaseRoom):
             })
 
     def on_enter(self):
-        print("⚔ Le chemin du bushido commence !")
+        print("Le chemin du bushido commence !")
 
     def on_exit(self):
-        print("🌸 L'honneur du samouraï est sauf !")
+        print("L'honneur du samourai est sauf !")
 
     def draw_epoch_decoration(self, surface):
-        # Pétales de cerisier animés
+        # Petales de cerisier animes
         for p in self._petals:
             p["x"] += p["vx"]
             p["y"] += p["vy"]

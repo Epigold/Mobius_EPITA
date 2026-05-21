@@ -2,11 +2,11 @@
 # epoques/futuristique.py
 
 """
-ÉPOQUE : FUTURISTE
-Personnage : Démembreur (robot)
-Armes     : Pistolet Laser (distance) · Minigun (distance rapide)
-Thème     : Station spatiale, grille holographique, néons cyan
-Difficulté: ×3.0
+EPOQUE : FUTURISTE
+Personnage : Demembreur (robot)
+Armes     : Pistolet Laser (distance)  -  Minigun (distance rapide)
+Theme     : Station spatiale, grille holographique, neons cyan
+Difficulte: x3.0
 """
 
 import pygame
@@ -20,7 +20,7 @@ class FuturistiqueRoom(BaseRoom):
 
     def __init__(self, game):
         super().__init__(game, "futuristique")
-        self.epoch_name_display = "ÈRE FUTURISTE"
+        self.epoch_name_display = "ERE FUTURISTE"
         self.theme_color = FUTURISTIQUE_COLOR
         self._scan_y   = 0
         self._scan_dir = 1
@@ -28,10 +28,10 @@ class FuturistiqueRoom(BaseRoom):
         self._dp_timer = 0
 
     def on_enter(self):
-        print("🤖 Système d'armement activé...")
+        print("Systeme d'armement active...")
 
     def on_exit(self):
-        print("✅ Réseau ennemi neutralisé !")
+        print("Reseau ennemi neutralise !")
 
     def draw_epoch_decoration(self, surface):
         # Ligne de scan holographique
@@ -45,7 +45,7 @@ class FuturistiqueRoom(BaseRoom):
         scan_line.fill((0, 220, 255, 30))
         surface.blit(scan_line, (0, int(self._scan_y)))
 
-        # Particules de données flottantes
+        # Particules de donnees flottantes
         self._dp_timer += 1
         if self._dp_timer % 12 == 0:
             self._data_particles.append({
