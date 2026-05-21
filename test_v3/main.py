@@ -1041,6 +1041,10 @@ class Game:
             self.client = None
         self.net_mode = "solo"
         self._conn_error = ""
+        self._conn_success = False
+        self._pending_skill = ""
+        self._pending_ip = ""
+        self._conn_deadline = 0.0
 
     # ── Boucle principale ─────────────────────────────────────────────────────
 
@@ -1137,7 +1141,8 @@ class Game:
                         self._close_network()
                         self.game_state = MAIN_MENU
 
-                if not self.transition.active and self.net_mode != "client":
+                if (not self.transition.active and self.net_mode != "client"
+                        and self.current_room and self.current_room.player is not None):
                     result = self.current_room.update()
                     if result is True:
                         self.game_state = GAME_OVER
@@ -1336,6 +1341,9 @@ class Game:
         return running
 
     def _start_connection(self, ip: str, skill: str):
+        if self.client:
+            self.client.close()
+            self.client = None
         self._conn_error   = ""
         self._conn_success = False
         self._pending_skill = skill
