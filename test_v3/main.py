@@ -140,6 +140,18 @@ def make_particles(n, w, h):
             for _ in range(n)]
 
 
+def load_optional_scaled_image(path_parts, size=None, alpha=True):
+    """Charge une image optionnelle sans interrompre le jeu si elle est absente."""
+    try:
+        img = pygame.image.load(get_asset_path(*path_parts))
+        img = img.convert_alpha() if alpha else img.convert()
+        if size:
+            img = pygame.transform.smoothscale(img, size)
+        return img
+    except Exception:
+        return None
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 #  ÉCRAN TITRE PRINCIPAL
 # ══════════════════════════════════════════════════════════════════════════════
@@ -157,6 +169,9 @@ class MainMenuRenderer:
         self.font_sm     = pygame.font.Font(None, 22)
         self._timer      = 0
         self._particles  = make_particles(50, w, h)
+        self.logo        = load_optional_scaled_image(
+            ("ui", "logo", "mobius_violet.png"), size=(360, 240)
+        )
 
     def _btn(self, i):
         return pygame.Rect(self.w//2 - self.BTN_W//2,
@@ -172,15 +187,24 @@ class MainMenuRenderer:
         draw_particles(surface, self._particles, self.w, self.h)
 
         # Logo animé
-        ty    = int(self.h//2 - 180 + math.sin(self._timer*0.02)*5)
-        title = self.font_xl.render("MOBIUS", True, WHITE)
-        sub   = self.font_lg.render("R O G U E L I K E", True, (160,200,255))
-        ref   = pygame.transform.flip(title, False, True)
-        ref_s = pygame.Surface(ref.get_size(), pygame.SRCALPHA)
-        ref_s.blit(ref, (0,0)); ref_s.set_alpha(35)
-        surface.blit(ref_s, (self.w//2 - title.get_width()//2, ty+title.get_height()))
-        surface.blit(title,  (self.w//2 - title.get_width()//2, ty))
-        surface.blit(sub,    (self.w//2 - sub.get_width()//2,   ty+title.get_height()+8))
+        ty = int(self.h//2 - 220 + math.sin(self._timer*0.02)*5)
+        sub = self.font_lg.render("R O G U E L I K E", True, (160,200,255))
+        if self.logo:
+            lx = self.w//2 - self.logo.get_width()//2
+            shadow = self.logo.copy()
+            shadow.fill((0, 0, 0, 60), special_flags=pygame.BLEND_RGBA_MULT)
+            surface.blit(shadow, (lx + 12, ty + 18))
+            surface.blit(self.logo, (lx, ty))
+            sub_y = ty + self.logo.get_height() - 8
+        else:
+            title = self.font_xl.render("MOBIUS", True, WHITE)
+            ref   = pygame.transform.flip(title, False, True)
+            ref_s = pygame.Surface(ref.get_size(), pygame.SRCALPHA)
+            ref_s.blit(ref, (0,0)); ref_s.set_alpha(35)
+            surface.blit(ref_s, (self.w//2 - title.get_width()//2, ty+title.get_height()))
+            surface.blit(title,  (self.w//2 - title.get_width()//2, ty))
+            sub_y = ty + title.get_height() + 8
+        surface.blit(sub, (self.w//2 - sub.get_width()//2, sub_y))
 
         draw_button(surface, self.get_play_rect(), "Jouer",
                     self.get_play_rect().collidepoint(mouse), self.font_md)
@@ -747,6 +771,12 @@ class GameOverRenderer:
         self.font_xl   = pygame.font.Font(None, 90)
         self.font_md   = pygame.font.Font(None, 32)
         self._timer    = 0
+        self.victory_art = load_optional_scaled_image(
+            ("ui", "game_over", "victory.png"), size=(560, 390)
+        )
+        self.defeat_art = load_optional_scaled_image(
+            ("ui", "game_over", "defeat.png"), size=(560, 390)
+        )
 
     def draw(self, surface, player, epoch_key, victory=False):
         self._timer += 1
@@ -758,15 +788,27 @@ class GameOverRenderer:
             (GOLD, "VICTOIRE !", "Vous avez traversé toutes les époques !")
             if victory else (RED, "GAME OVER", "oh, oh... l'histoire s'arrete ici"))
         scale  = 1.0 + 0.03*math.sin(self._timer*0.1)
+        art = self.victory_art if victory else self.defeat_art
+        title_y = cy - 200
+
+        if art:
+            art_rect = art.get_rect(center=(cx, cy - 125))
+            frame = pygame.Surface((art_rect.w + 24, art_rect.h + 24), pygame.SRCALPHA)
+            pygame.draw.rect(frame, (0, 0, 0, 140), frame.get_rect(), border_radius=18)
+            pygame.draw.rect(frame, col, frame.get_rect(), 3, border_radius=18)
+            surface.blit(frame, (art_rect.x - 12, art_rect.y - 12))
+            surface.blit(art, art_rect)
+            title_y = cy + 100
+
         t_surf = self.font_xl.render(title_txt, True, col)
         t_surf = pygame.transform.scale(t_surf,
             (int(t_surf.get_width()*scale), int(t_surf.get_height()*scale)))
-        surface.blit(t_surf, (cx-t_surf.get_width()//2, cy-200))
+        surface.blit(t_surf, (cx-t_surf.get_width()//2, title_y))
         s_txt = self.font_md.render(sub_txt, True, (200,200,220))
-        surface.blit(s_txt, (cx-s_txt.get_width()//2, cy-120))
+        surface.blit(s_txt, (cx-s_txt.get_width()//2, title_y + 80))
         sep = pygame.Surface((400,2), pygame.SRCALPHA)
         sep.fill((*col[:3], int(150+80*math.sin(self._timer*0.05))))
-        surface.blit(sep, (cx-200, cy-92))
+        surface.blit(sep, (cx-200, title_y + 108))
         if player:
             epoch_name = EPOCHS.get(epoch_key, {}).get("name", epoch_key)
             for i, (text, color) in enumerate([
@@ -775,15 +817,16 @@ class GameOverRenderer:
                 (f"Pièces collectées : {player.coins}", GOLD),
             ]):
                 t = self.font_md.render(text, True, color)
-                surface.blit(t, (cx-t.get_width()//2, cy-60+i*42))
+                surface.blit(t, (cx-t.get_width()//2, title_y + 140 + i*42))
         panel = pygame.Surface((550,52), pygame.SRCALPHA)
         panel.fill((20,20,20,160))
         pygame.draw.rect(panel, (80,80,100), panel.get_rect(), 1, border_radius=8)
-        surface.blit(panel, (cx-250, cy+130))
+        panel_y = min(self.h - 90, title_y + 280)
+        surface.blit(panel, (cx-250, panel_y))
         x_off = cx-220
         for label, color in [("[R] Rejouer",WHITE),("[M] Menu",(160,200,255)),("[ESC] Quitter",(160,100,100))]:
             t = self.font_md.render(label, True, color)
-            surface.blit(t, (x_off, cy+142)); x_off += 180
+            surface.blit(t, (x_off, panel_y + 12)); x_off += 180
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -870,11 +913,11 @@ class Game:
         # ── Fond des menus ─────────────────────────────────────────────────────
         bg_renderer  = BackgroundRenderer(sw, sh)
         self.menu_bg = bg_renderer.get("futuristique")
-        try:
-            img = pygame.image.load(get_asset_path("backgrounds","decor_dj_1.jpg")).convert()
-            self.menu_bg = pygame.transform.scale(img, (sw, sh))
-        except Exception:
-            pass
+        menu_bg = load_optional_scaled_image(
+            ("backgrounds", "decor_dj_1.jpg"), size=(sw, sh), alpha=False
+        )
+        if menu_bg:
+            self.menu_bg = menu_bg
 
         # ── Renderers ─────────────────────────────────────────────────────────
         self.main_menu_r   = MainMenuRenderer(sw, sh, self.menu_bg)

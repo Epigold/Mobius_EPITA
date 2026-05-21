@@ -62,7 +62,7 @@ SETTINGS = 4
 # Gestion des chemins portables (Linux et Windows)
 BASE_PATH = Path(__file__).parent
 ASSETS_PATH = BASE_PATH / "assets"
-CHARACTERS_PATH = ASSETS_PATH / "characteres"
+CHARACTERS_PATH = ASSETS_PATH / "characters"
 BACKGROUNDS_PATH = ASSETS_PATH / "backgrounds"
 WEAPONS_PATH = ASSETS_PATH / "weapons"
 
@@ -71,9 +71,9 @@ def get_asset_path(*parts):
     return str(BASE_PATH / "assets" / Path(*parts))
 
 # Chargement des images
-player_image = pygame.image.load(get_asset_path("characteres", "chara_test.png")).convert_alpha()
+player_image = pygame.image.load(get_asset_path("characters", "chara_test.png")).convert_alpha()
 player_image = pygame.transform.scale(player_image, (TAILLE_PERSO, TAILLE_PERSO))
-enemy_image = pygame.image.load(get_asset_path("characteres", "monstre_dj_1.png")).convert_alpha()
+enemy_image = pygame.image.load(get_asset_path("characters", "monstre_dj_1.png")).convert_alpha()
 background_image = pygame.image.load(get_asset_path("backgrounds", "decor_dj_1.jpg")).convert()
 background_image = pygame.transform.scale(background_image, (screen_width, screen_height))
 

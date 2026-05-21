@@ -15,6 +15,10 @@ import math
 import random
 from .constants import *
 
+EPOCH_BACKGROUND_ASSETS = {
+    "prehistoire": ("backgrounds", "decor_dj_1.jpg"),
+}
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  CACHE DE SPRITES
@@ -112,19 +116,19 @@ class BackgroundRenderer:
         return self._surfaces[epoch_key]
 
     def _build(self, epoch_key):
-        """Essaie de charger un JPG, sinon génère procéduralement."""
-        # Tentative image
-        try:
-            img = pygame.image.load(get_asset_path("backgrounds", "decor_dj_1.jpg")).convert()
-            img = pygame.transform.scale(img, (self.w, self.h))
-            # Teinte par époque
-            tint = EPOCHS[epoch_key]["bg_tint"]
-            overlay = pygame.Surface((self.w, self.h), pygame.SRCALPHA)
-            overlay.fill((*tint, 60))
-            img.blit(overlay, (0, 0))
-            return img
-        except Exception:
-            pass
+        """Charge un fond dédié à l'époque si disponible, sinon génère procéduralement."""
+        asset_parts = EPOCH_BACKGROUND_ASSETS.get(epoch_key)
+        if asset_parts:
+            try:
+                img = pygame.image.load(get_asset_path(*asset_parts)).convert()
+                img = pygame.transform.scale(img, (self.w, self.h))
+                tint = EPOCHS[epoch_key]["bg_tint"]
+                overlay = pygame.Surface((self.w, self.h), pygame.SRCALPHA)
+                overlay.fill((*tint, 45))
+                img.blit(overlay, (0, 0))
+                return img
+            except Exception:
+                pass
         return self._generate(epoch_key)
 
     def _generate(self, epoch_key):
