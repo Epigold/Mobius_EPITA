@@ -17,10 +17,10 @@ CONTROLES
   P2 (client) : MEMES touches que P1 (chacun joue sur son propre PC)
 
 RESEAU (voir core/network.py pour les details)
-  - Protocole UDP, port 55 555 par defaut
+  - Protocole UDP, port 55 600 par defaut
   - Le HOST est le serveur autoritaire : il simule tout et envoie l'etat au client
   - Le CLIENT envoie ses inputs et recoit l'etat complet pour l'afficher
-  - Ouvrir le port 55555 UDP dans le pare-feu et sur le routeur pour jouer sur internet
+  - Ouvrir le port 55600 UDP dans le pare-feu et sur le routeur pour jouer sur internet
 """
 
 import pygame
@@ -29,6 +29,7 @@ import math
 import random
 import threading
 import time
+from pathlib import Path
 
 from core.constants import *
 from core.graphics  import SpriteCache, BackgroundRenderer, ScreenEffects
@@ -53,6 +54,151 @@ IP_INPUT         = 7   # Saisie de l'adresse IP du host
 WAITING_CLIENT   = 8   # Host attend la connexion de P2
 CONNECTING       = 9   # Client tente de se connecter au host
 CHARACTER_SELECT = 4   # Selection de classe
+
+SONS_PATH = Path(__file__).parent / "sons"
+
+
+class MusicManager:
+    """Gestion simple des musiques de fond par contexte de jeu."""
+
+    TRACKS = {
+        "menu": SONS_PATH / "menu.mp3",
+        "game_normal": SONS_PATH / "game_normal.mp3",
+        "game_boss": SONS_PATH / "game_boss.mp3",
+        "defeat": SONS_PATH / "defeat.mp3",
+    }
+
+    def __init__(self):
+        self.current_key = None
+        self.pending_key = None
+        self._switch_at = 0.0
+        self.fade_ms = 700
+        self.volume = 0.5
+        self.available = True
+        try:
+            if not pygame.mixer.get_init():
+                pygame.mixer.init()
+        except Exception:
+            self.available = False
+
+    def play(self, key):
+        if not self.available:
+            return
+        if key == self.current_key and self.pending_key is None:
+            return
+        if key == self.pending_key:
+            return
+        path = self.TRACKS.get(key)
+        if not path or not path.exists():
+            return
+        try:
+            if self.current_key is None or not pygame.mixer.music.get_busy():
+                pygame.mixer.music.load(str(path))
+                pygame.mixer.music.play(-1, fade_ms=self.fade_ms)
+                pygame.mixer.music.set_volume(self.volume)
+                self.current_key = key
+                self.pending_key = None
+                self._switch_at = 0.0
+            else:
+                pygame.mixer.music.fadeout(self.fade_ms)
+                self.pending_key = key
+                self._switch_at = time.monotonic() + (self.fade_ms / 1000.0)
+        except Exception:
+            self.available = False
+
+    def update(self):
+        if not self.available or not self.pending_key:
+            return
+        if time.monotonic() < self._switch_at:
+            return
+        path = self.TRACKS.get(self.pending_key)
+        if not path or not path.exists():
+            self.pending_key = None
+            return
+        try:
+            pygame.mixer.music.load(str(path))
+            pygame.mixer.music.play(-1, fade_ms=self.fade_ms)
+            pygame.mixer.music.set_volume(self.volume)
+            self.current_key = self.pending_key
+        except Exception:
+            self.available = False
+        finally:
+            self.pending_key = None
+            self._switch_at = 0.0
+
+    def set_volume(self, volume):
+        self.volume = volume
+        if not self.available:
+            return
+        try:
+            pygame.mixer.music.set_volume(volume)
+        except Exception:
+            pass
+
+    def stop(self):
+        if not self.available:
+            return
+        try:
+            pygame.mixer.music.stop()
+        except Exception:
+            pass
+        self.current_key = None
+        self.pending_key = None
+        self._switch_at = 0.0
+
+
+class SoundManager:
+    """Gestion simple des bruitages superposes a la musique."""
+
+    TRACKS = {
+        "berserker_power": SONS_PATH / "effets" / "berserker_power.mp3",
+        "dash": SONS_PATH / "effets" / "dash.mp3",
+        "degats_monstres": SONS_PATH / "effets" / "degats_monstres.mp3",
+        "ninja_tp": SONS_PATH / "effets" / "ninja_tp.mp3",
+        "ouverture_coffre": SONS_PATH / "effets" / "ouverture_coffre.mp3",
+        "pouvoir_mage": SONS_PATH / "effets" / "pouvoir_mage.mp3",
+        "powerup": SONS_PATH / "effets" / "powerup.mp3",
+    }
+
+    def __init__(self):
+        self.available = True
+        self.volume = 0.5
+        self._sounds = {}
+        self._last_play_times = {}
+        try:
+            if not pygame.mixer.get_init():
+                pygame.mixer.init()
+            pygame.mixer.set_num_channels(max(16, pygame.mixer.get_num_channels()))
+            for key, path in self.TRACKS.items():
+                if path.exists():
+                    snd = pygame.mixer.Sound(str(path))
+                    snd.set_volume(self.volume)
+                    self._sounds[key] = snd
+        except Exception:
+            self.available = False
+
+    def set_volume(self, volume):
+        self.volume = volume
+        if not self.available:
+            return
+        for snd in self._sounds.values():
+            snd.set_volume(volume)
+
+    def play(self, key, min_interval=0.0):
+        if not self.available:
+            return
+        snd = self._sounds.get(key)
+        if snd is None:
+            return
+        now = time.monotonic()
+        last = self._last_play_times.get(key, 0.0)
+        if min_interval > 0 and (now - last) < min_interval:
+            return
+        self._last_play_times[key] = now
+        try:
+            snd.play()
+        except Exception:
+            self.available = False
 
 
 # ==============================================================================
@@ -310,7 +456,7 @@ class ModeSelectRenderer:
         pygame.draw.line(surf, (60,140,200,150), (30,240), (self.CARD_W-30,240), 1)
         for i, line in enumerate(["Heberger : vous etes le serveur",
                                    "Rejoindre : entrez l'IP du host",
-                                   "Port UDP 55555 (ouvrir le pare-feu)",
+                                   f"Port UDP {DEFAULT_PORT} (ouvrir le pare-feu)",
                                    "Fonctionne en LAN et sur internet"]):
             t = fd.render(line, True, (200,230,255))
             surf.blit(t, (cx-t.get_width()//2, 252+i*20))
@@ -430,7 +576,7 @@ class OnlineMenuRenderer:
 
         # Note pare-feu
         note = self.font_sm.render(
-            "Sur internet : ouvrir le port UDP 55555 dans le pare-feu et le routeur",
+            f"Sur internet : ouvrir le port UDP {DEFAULT_PORT} dans le pare-feu et le routeur",
             True, (180,160,80))
         surface.blit(note, (self.w//2-note.get_width()//2, self.h-42))
         port_note = self.font_sm.render(
@@ -948,6 +1094,8 @@ class Game:
         self.gameover_r    = GameOverRenderer(sw, sh, self.menu_bg)
         self.transition    = EpochTransition(sw, sh)
         self.volume_slider = VolumeSlider()
+        self.music         = MusicManager()
+        self.sfx           = SoundManager()
         # Renderer client (cree quand on joue cote client)
         self.client_renderer: ClientRenderer | None = None
 
@@ -973,6 +1121,8 @@ class Game:
         self._local_ip_cache: str = get_local_ip()   # calcule une seule fois
         self._host_replay_vote = False
         self._client_replay_vote = False
+        self._client_prev_buttons = {"dash": False, "skill": False, "fire": False, "chest": False}
+        self._last_client_sfx_frame = -1
 
         # -- Salles -------------------------------------------------------------
         self.rooms: dict = {
@@ -1000,6 +1150,8 @@ class Game:
         self.current_room  = self.rooms["prehistoire"]
         self._host_replay_vote = False
         self._client_replay_vote = False
+        self._client_prev_buttons = {"dash": False, "skill": False, "fire": False, "chest": False}
+        self._last_client_sfx_frame = -1
 
         if self.net_mode == "solo":
             # -- Solo : mode classique ------------------------------------------
@@ -1071,6 +1223,44 @@ class Game:
         self._client_replay_vote = False
         self._pending_ip = ""
         self._conn_deadline = 0.0
+        self._client_prev_buttons = {"dash": False, "skill": False, "fire": False, "chest": False}
+        self._last_client_sfx_frame = -1
+
+    def _update_music(self):
+        if self.game_state in (MAIN_MENU, MODE_SELECT, ONLINE_MENU, IP_INPUT, WAITING_CLIENT, CONNECTING, CHARACTER_SELECT):
+            self.music.play("menu")
+            return
+        if self.game_state == GAME_OVER:
+            self.music.play("defeat")
+            return
+        if self.game_state == PLAYING:
+            if self.net_mode == "client" and self.client:
+                state = self.client.get_state()
+                music_key = state.get("music_key") or state.get("mk")
+                if music_key in MusicManager.TRACKS:
+                    self.music.play(music_key)
+                    return
+                is_boss = bool(state.get("boss_wave") or state.get("bw"))
+                self.music.play("game_boss" if is_boss else "game_normal")
+                return
+            if self.current_room:
+                self.music.play("game_boss" if self.current_room.boss_wave else "game_normal")
+
+    def _sync_audio_volume(self):
+        vol = self.volume_slider.volume
+        self.music.set_volume(vol)
+        self.sfx.set_volume(vol)
+
+    def _play_client_sound_events(self):
+        if self.net_mode != "client" or not self.client:
+            return
+        state = self.client.get_state()
+        frame = int(state.get("f", -1) or -1)
+        if frame <= self._last_client_sfx_frame:
+            return
+        self._last_client_sfx_frame = frame
+        for key in state.get("sound_events", []) or state.get("sx", []):
+            self.sfx.play(key)
 
     # -- Boucle principale -----------------------------------------------------
 
@@ -1078,6 +1268,9 @@ class Game:
         running = True
         while running:
             self.clock.tick(60)
+            self.music.update()
+            self._update_music()
+            self._sync_audio_volume()
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -1178,6 +1371,7 @@ class Game:
                 elif self.net_mode == "client" and self.client:
                     # 1. Lire les paquets entrants (etat du jeu)
                     self.client.poll()
+                    self._play_client_sound_events()
                     # 2. Envoyer nos inputs au serveur
                     inputs = self._collect_client_inputs()
                     self.client.send_inputs(inputs)
@@ -1307,17 +1501,34 @@ class Game:
         if dx or dy:
             dx /= norm; dy /= norm
 
+        dash_pressed = bool(keys[pygame.K_SPACE])
+        skill_pressed = bool(keys[pygame.K_f])
+        fire_pressed = bool(mouse[0])
+        chest_pressed = bool(keys[pygame.K_e])
+
+        dash_edge = dash_pressed and not self._client_prev_buttons["dash"]
+        skill_edge = skill_pressed and not self._client_prev_buttons["skill"]
+        fire_edge = fire_pressed and not self._client_prev_buttons["fire"]
+        chest_edge = chest_pressed and not self._client_prev_buttons["chest"]
+
+        self._client_prev_buttons = {
+            "dash": dash_pressed,
+            "skill": skill_pressed,
+            "fire": fire_pressed,
+            "chest": chest_pressed,
+        }
+
         return {
             "dx":        dx,
             "dy":        dy,
             "aim_x":     mx,
             "aim_y":     my,
-            "dash":      bool(keys[pygame.K_SPACE]),
-            "skill":     bool(keys[pygame.K_f]),
-            "fire":      bool(mouse[0]),        # Clic gauche
+            "dash":      dash_edge,
+            "skill":     skill_edge,
+            "fire":      fire_edge,
             "fire_tx":   mx,
             "fire_ty":   my,
-            "chest":     bool(keys[pygame.K_e]),
+            "chest":     chest_edge,
             "weapon_idx": (1 if keys[pygame.K_2] else (0 if keys[pygame.K_1] else -1)),
         }
 

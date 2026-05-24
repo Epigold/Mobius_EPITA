@@ -60,6 +60,7 @@ class Bullet(pygame.sprite.Sprite):
         self.damage = int(weapon.damage * damage_mult)
         self.epoch  = epoch_key
         self.owner  = owner
+        self.weapon_key = weapon.key
 
         # Sprite : copie du sprite de l'arme (redimensionne)
         base = weapon.image
@@ -76,6 +77,7 @@ class Bullet(pygame.sprite.Sprite):
 
         # Rotation de l'image
         angle = math.degrees(math.atan2(-dy, dx))
+        self.angle = angle
         self.image = pygame.transform.rotate(self.original_image, angle)
         self.rect  = self.image.get_rect(center=(x, y))
 
@@ -134,24 +136,41 @@ class MeleeAttack(pygame.sprite.Sprite):
 
 class EnemyBullet(pygame.sprite.Sprite):
     def __init__(self, x, y, target_x, target_y,
-                 speed=10, damage=12, epoch_key="prehistoire"):
+                 speed=10, damage=12, epoch_key="prehistoire",
+                 sprite_path=None, size=None):
         super().__init__()
         self.damage   = damage
         self.epoch    = epoch_key
+        self.sprite_path = sprite_path
+        self.render_size = size
 
-        size = 14
-        self.image = pygame.Surface((size, size), pygame.SRCALPHA)
-        color = EPOCHS.get(epoch_key, {}).get("enemy_tint", RED)
-        pygame.draw.circle(self.image, color, (size // 2, size // 2), size // 2)
-        # Contour
-        pygame.draw.circle(self.image, WHITE, (size // 2, size // 2), size // 2, 1)
-
-        self.rect = self.image.get_rect(center=(x, y))
         dx = target_x - x
         dy = target_y - y
         dist = math.hypot(dx, dy) or 1
         self.vel_x = (dx / dist) * speed
         self.vel_y = (dy / dist) * speed
+
+        self.original_image = None
+        if sprite_path:
+            try:
+                target_size = size or (42, 18)
+                self.original_image = SpriteCache.get().load(*sprite_path, size=target_size)
+            except Exception:
+                self.original_image = None
+
+        if self.original_image is None:
+            bullet_size = size or 14
+            if isinstance(bullet_size, tuple):
+                bullet_size = max(bullet_size)
+            self.original_image = pygame.Surface((bullet_size, bullet_size), pygame.SRCALPHA)
+            color = EPOCHS.get(epoch_key, {}).get("enemy_tint", RED)
+            pygame.draw.circle(self.original_image, color, (bullet_size // 2, bullet_size // 2), bullet_size // 2)
+            pygame.draw.circle(self.original_image, WHITE, (bullet_size // 2, bullet_size // 2), bullet_size // 2, 1)
+
+        angle = math.degrees(math.atan2(-dy, dx))
+        self.angle = angle
+        self.image = pygame.transform.rotate(self.original_image, angle)
+        self.rect = self.image.get_rect(center=(x, y))
         self._fx, self._fy = float(x), float(y)
 
     def update(self, *args):

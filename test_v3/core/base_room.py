@@ -86,6 +86,7 @@ class Player(pygame.sprite.Sprite):
 
         # Groupes de sprites (injectes par BaseRoom.start())
         self._bullets = None; self._melee_attacks = None; self._all_sprites = None
+        self._sound_callback = None
 
         # -- Flags reseau (utilises uniquement pour P2 cote serveur) ----------
         # Ces flags sont poses par apply_network_inputs() et consommes dans
@@ -95,7 +96,6 @@ class Player(pygame.sprite.Sprite):
         self._net_fire    = False   # Tir demande par le client ce frame
         self._net_fire_tx = 0       # Coordonnee X cible du tir
         self._net_fire_ty = 0       # Coordonnee Y cible du tir
-        self._net_chest   = False   # Interaction coffre demandee
         self._net_interact = False
         self._network_controlled = False
 
@@ -145,7 +145,7 @@ class Player(pygame.sprite.Sprite):
         self._handle_move_network(); self._update_anim()
         self.current_weapon.update_cooldown()
         # Reinitialiser les flags a usage unique
-        self._net_dash = self._net_skill = self._net_fire = self._net_chest = False
+        self._net_dash = self._net_skill = self._net_fire = False
 
     def apply_network_inputs(self, inputs: dict, chests=None,
                               float_texts=None, particles=None):
@@ -158,7 +158,12 @@ class Player(pygame.sprite.Sprite):
                         "chest":bool, "weapon_idx":int}
         """
         if not inputs:
-            return  # Paquet perdu ce frame - garder l'ancienne direction
+            # Paquet perdu ce frame : neutraliser les actions momentanees
+            # et stopper le mouvement continu pour eviter le "ghost walk".
+            self.dir_x = 0
+            self.dir_y = 0
+            self._net_interact = False
+            return
 
         # Mouvement : mise a jour de la direction normalisee
         dx = float(inputs.get('dx', 0.0))
@@ -184,18 +189,6 @@ class Player(pygame.sprite.Sprite):
             self._net_fire = True
             self._net_fire_tx = int(inputs.get('fire_tx', self.rect.centerx + 100))
             self._net_fire_ty = int(inputs.get('fire_ty', self.rect.centery))
-
-        # Interaction coffre (evenement discret, execute immediatement)
-        if inputs.get('chest') and not self._net_chest:
-            self._net_chest = True
-            if chests and not self.is_downed:
-                for chest in chests:
-                    if chest.check_interaction(self.rect):
-                        if chest.open(self):
-                            if float_texts:
-                                float_texts.add(self.rect.centerx, self.rect.top-20,
-                                                f"+ {chest.weapon_inside}!", GOLD)
-                            break
 
         # Changement d'arme (evenement discret)
         widx = int(inputs.get('weapon_idx', -1))
@@ -347,6 +340,7 @@ class Player(pygame.sprite.Sprite):
             self.skill_active=True; self.skill_duration=300; self.skill_cooldown=1800
         elif self.skill == "berserker":
             self.damage_boost=2.0; self.boost_timer=300; self.skill_cooldown=1200
+            if self._sound_callback: self._sound_callback("berserker_power")
         elif self.skill == "vampire":
             self.skill_active=True; self.skill_duration=600; self.skill_cooldown=900
         elif self.skill == "ninja":
@@ -363,6 +357,7 @@ class Player(pygame.sprite.Sprite):
             self.rect.clamp_ip(pygame.Rect(0,0,SCREEN_WIDTH,SCREEN_HEIGHT))
             self.hitbox.center=self.rect.center
             self.skill_cooldown=600
+            if self._sound_callback: self._sound_callback("ninja_tp")
         elif self.skill == "mage" and self._bullets is not None and self._all_sprites is not None:
             for deg in range(0,360,30):
                 rad=math.radians(deg)
@@ -370,6 +365,7 @@ class Player(pygame.sprite.Sprite):
                 b=Bullet(self.rect.centerx,self.rect.centery,tx,ty,self.current_weapon,1.5,owner=self)
                 self._bullets.add(b); self._all_sprites.add(b)
             self.skill_cooldown=1200
+            if self._sound_callback: self._sound_callback("pouvoir_mage")
         return True
 
     def change_weapon(self, key):
@@ -431,11 +427,26 @@ class Enemy(pygame.sprite.Sprite):
         self.epoch_key  = epoch_key
         self.enemy_type = enemy_type
         cfg  = ENEMY_CONFIG.get(epoch_key, ENEMY_CONFIG["prehistoire"])[enemy_type]
+        self.cfg = cfg
+        sprite_path = sprite_path or cfg.get("sprite")
+        self._uses_sheet = bool(cfg.get("sheet"))
         diff = EPOCHS.get(epoch_key,{}).get("difficulty",1.0)
         self.speed=cfg["speed"]; self.max_health=int(cfg["health"]*diff)
         self.health=self.max_health; self.damage=int(cfg["damage"]*diff); self.size=cfg["size"]
         self.damage_cooldown=0; self.shoot_cooldown=0
         self._enemy_group = None
+        self.facing_right = True
+        self._anim_state = "idle"
+        self._anim_frame = 0
+        self._anim_timer = 0
+        self._anim_hold = 0
+        self._sheet_frames = {}
+        if self.enemy_type == "tank":
+            self._melee_stop_dist = self.size * 0.26 + PLAYER_SIZE * 0.12 + 6
+            self._melee_attack_dist = self._melee_stop_dist + 18
+        else:
+            self._melee_stop_dist = self.size * 0.36 + PLAYER_SIZE * 0.18 + 16
+            self._melee_attack_dist = self._melee_stop_dist + 12
         epoch_color=EPOCHS.get(epoch_key,{}).get("enemy_tint",(180,80,80))
         self._build_sprite(sprite_path, epoch_color)
         self._spawn_on_edge()
@@ -450,11 +461,90 @@ class Enemy(pygame.sprite.Sprite):
     def _build_sprite(self, sprite_path, tint_color):
         if sprite_path:
             try:
-                cache=SpriteCache.get(); img=cache.load(*sprite_path,size=(self.size,self.size))
+                cache = SpriteCache.get()
+                if self._uses_sheet:
+                    gif_animations = self.cfg.get("gif_animations")
+                    manual_frames = self.cfg.get("sheet_frames")
+                    if gif_animations:
+                        self._sheet_frames = {
+                            state: cache.load_gif_frames(*anim_path, size=(self.size, self.size))
+                            for state, anim_path in gif_animations.items()
+                        }
+                    elif manual_frames:
+                        trim = bool(self.cfg.get("sheet_trim", True))
+                        common_scale = bool(self.cfg.get("sheet_common_scale", False))
+                        bbox_anchor = bool(self.cfg.get("sheet_bbox_anchor", False))
+                        self._sheet_frames = {
+                            state: cache.load_frames(
+                                *sprite_path,
+                                frame_rects=rects,
+                                size=(self.size, self.size),
+                                trim=trim,
+                                common_scale=common_scale,
+                                bbox_anchor=bbox_anchor,
+                            )
+                            for state, rects in manual_frames.items()
+                        }
+                    else:
+                        cols = int(self.cfg.get("sheet_cols", 3))
+                        rows_count = int(self.cfg.get("sheet_rows", 3))
+                        rows = cache.load_sheet(
+                            *sprite_path,
+                            cols=cols,
+                            rows=rows_count,
+                            size=(self.size, self.size),
+                        )
+                        self._sheet_frames = {
+                            "idle": rows[0],
+                            "walk": rows[1],
+                            "attack": rows[2],
+                        }
+                    self.base_image = self._sheet_frames["idle"][0]
+                    self.image = self.base_image.copy()
+                    self.rect = self.image.get_rect()
+                    return
+                img = cache.load(*sprite_path, size=(self.size, self.size))
                 self.base_image=img; self.image=img.copy(); self.rect=self.image.get_rect(); return
             except Exception: pass
         self.base_image=self._draw_procedural(tint_color)
         self.image=self.base_image.copy(); self.rect=self.image.get_rect()
+
+    def _set_anim_state(self, state, hold_frames=0):
+        if not self._uses_sheet:
+            return
+        if self._anim_state == "attack" and self._anim_hold > 0 and state != "attack":
+            return
+        if state != self._anim_state:
+            self._anim_state = state
+            self._anim_frame = 0
+            self._anim_timer = 0
+        self._anim_hold = max(self._anim_hold, hold_frames)
+
+    def _update_animation(self):
+        if not self._uses_sheet:
+            return
+
+        if self._anim_hold > 0:
+            self._anim_hold -= 1
+        elif self._anim_state == "attack":
+            self._set_anim_state("idle")
+
+        frames = self._sheet_frames.get(self._anim_state)
+        if not frames:
+            return
+
+        self._anim_timer += 1
+        speed = 6 if self._anim_state == "walk" else 8
+        if self._anim_timer >= speed:
+            self._anim_timer = 0
+            self._anim_frame = (self._anim_frame + 1) % len(frames)
+
+        img = frames[self._anim_frame]
+        if not self.facing_right:
+            img = pygame.transform.flip(img, True, False)
+        center = self.rect.center
+        self.image = img
+        self.rect = self.image.get_rect(center=center)
 
     def _draw_procedural(self, color):
         s=self.size; surf=pygame.Surface((s,s),pygame.SRCALPHA); r,g,b=color[:3]
@@ -488,16 +578,24 @@ class Enemy(pygame.sprite.Sprite):
         return surf
 
     def _spawn_on_edge(self):
+        max_x = max(50, SCREEN_WIDTH - 50)
+        max_y = max(50, SCREEN_HEIGHT - 50)
         edge=random.choice(["top","bottom","left","right"])
-        if edge=="top":      self.rect.centerx=random.randint(50,SCREEN_WIDTH-50);  self.rect.top=-self.size
-        elif edge=="bottom": self.rect.centerx=random.randint(50,SCREEN_WIDTH-50);  self.rect.bottom=SCREEN_HEIGHT+self.size
-        elif edge=="left":   self.rect.left=-self.size;   self.rect.centery=random.randint(50,SCREEN_HEIGHT-50)
-        else:                self.rect.right=SCREEN_WIDTH+self.size; self.rect.centery=random.randint(50,SCREEN_HEIGHT-50)
+        if edge=="top":      self.rect.centerx=random.randint(50,max_x);  self.rect.top=-self.size
+        elif edge=="bottom": self.rect.centerx=random.randint(50,max_x);  self.rect.bottom=SCREEN_HEIGHT+self.size
+        elif edge=="left":   self.rect.left=-self.size;   self.rect.centery=random.randint(50,max_y)
+        else:                self.rect.right=SCREEN_WIDTH+self.size; self.rect.centery=random.randint(50,max_y)
 
     def basic_movement(self):
         dx=self.player.rect.x-self.rect.x; dy=self.player.rect.y-self.rect.y
         dist=math.hypot(dx,dy) or 1
-        self.rect.x+=(dx/dist)*self.speed; self.rect.y+=(dy/dist)*self.speed
+        self.facing_right = dx >= 0
+        if dist > self._melee_stop_dist:
+            self.rect.x += (dx / dist) * self.speed
+            self.rect.y += (dy / dist) * self.speed
+            self._set_anim_state("walk")
+        else:
+            self._set_anim_state("idle")
         self._apply_enemy_separation()
 
     def _apply_enemy_separation(self):
@@ -527,11 +625,16 @@ class Enemy(pygame.sprite.Sprite):
 
     def handle_collision(self):
         if self.damage_cooldown > 0: self.damage_cooldown -= 1; return
-        if self.rect.colliderect(self.player.hitbox):
+        dist = math.hypot(
+            self.player.hitbox.centerx - self.rect.centerx,
+            self.player.hitbox.centery - self.rect.centery,
+        )
+        if dist <= self._melee_attack_dist:
             self.player.take_damage(self.damage); self.damage_cooldown=30
+            self._set_anim_state("attack", hold_frames=14)
 
     def update(self, *args):
-        self.player=self._get_nearest_player(); self.basic_movement(); self.handle_collision()
+        self.player=self._get_nearest_player(); self.basic_movement(); self.handle_collision(); self._update_animation()
 
     def draw_health_bar(self, surface):
         draw_enemy_health_bar(surface,self.rect,self.health,self.max_health,
@@ -543,6 +646,7 @@ class TankEnemy(Enemy):
     def update(self,*args):
         self.player=self._get_nearest_player(); self.basic_movement(); self.handle_collision()
         if self._hit_flash>0: self._hit_flash-=1
+        self._update_animation()
 
 class RusherEnemy(Enemy):
     def __init__(self,player,epoch_key): super().__init__(player,epoch_key,"rusher")
@@ -556,16 +660,25 @@ class SniperEnemy(Enemy):
         self.player=self._get_nearest_player()
         dx=self.player.rect.x-self.rect.x; dy=self.player.rect.y-self.rect.y
         dist=math.hypot(dx,dy) or 1
+        self.facing_right = dx >= 0
         if dist>self.shoot_range: self.basic_movement()
         elif dist<self.shoot_range-60:
             self.rect.x-=(dx/dist)*self.speed; self.rect.y-=(dy/dist)*self.speed
+            self._set_anim_state("walk")
+        else:
+            self._set_anim_state("idle")
         self.shoot_cooldown-=1
         if self.shoot_cooldown<=0 and dist<=self.shoot_range:
+            bullet_sprite = ("weapons", "lance_prehistoire.png") if self.epoch_key == "prehistoire" else None
+            bullet_size = (54, 20) if bullet_sprite else None
             b=EnemyBullet(self.rect.centerx,self.rect.centery,
                            self.player.rect.centerx,self.player.rect.centery,
-                           speed=9,damage=self.damage,epoch_key=self.epoch_key)
+                           speed=9,damage=self.damage,epoch_key=self.epoch_key,
+                           sprite_path=bullet_sprite,size=bullet_size)
             self._eb_group.add(b); self._all_sprites.add(b); self.shoot_cooldown=self.shoot_delay
+            self._set_anim_state("attack", hold_frames=16)
         self.handle_collision()
+        self._update_animation()
 
 class BossEnemy(Enemy):
     def __init__(self,player,epoch_key,wave,enemy_bullets_group,all_sprites_group):
@@ -650,6 +763,7 @@ class BaseRoom:
         self._network_frame=0
         self._boss_chest_opened=False
         self.objective_hint=""
+        self._sound_events = []
 
         self.player=None; self.player2=None
         self.mode="solo"; self._running=False
@@ -670,6 +784,7 @@ class BaseRoom:
         self._network_frame=0
         self._boss_chest_opened=False
         self.objective_hint=""
+        self._sound_events = []
         for grp in [self.all_sprites,self.enemies,self.bullets,
                     self.enemy_bullets,self.melee_attacks,self.chests,self.powerups]:
             grp.empty()
@@ -677,6 +792,7 @@ class BaseRoom:
         # Creer P1
         p1_pos=(SCREEN_WIDTH//3,SCREEN_HEIGHT//2) if skill2 else (SCREEN_WIDTH//2,SCREEN_HEIGHT//2)
         self.player=Player(skill,start_pos=p1_pos)
+        self.player._sound_callback = self._emit_sound
         if player_stats: self._restore_stats(self.player,player_stats)
         self.player._bullets=self.bullets; self.player._melee_attacks=self.melee_attacks
         self.player._all_sprites=self.all_sprites
@@ -690,6 +806,7 @@ class BaseRoom:
             p2_pos=(SCREEN_WIDTH*2//3,SCREEN_HEIGHT//2)
             self.player2=Player(skill2,start_pos=p2_pos)
             self.player2._network_controlled = True
+            self.player2._sound_callback = self._emit_sound
             if player2_stats: self._restore_stats(self.player2,player2_stats)
             self.player2._bullets=self.bullets; self.player2._melee_attacks=self.melee_attacks
             self.player2._all_sprites=self.all_sprites
@@ -706,10 +823,17 @@ class BaseRoom:
         player.max_health=stats.get("max_health",player.max_health)
         player.stamina=stats.get("stamina",player.max_stamina)
         player.max_stamina=stats.get("max_stamina",player.max_stamina)
+        player._sound_callback = self._emit_sound
 
     def on_enter(self): pass
     def on_exit(self):  pass
     def draw_epoch_decoration(self, surface): pass
+
+    def _emit_sound(self, key, min_interval=0.0):
+        if key not in self._sound_events:
+            self._sound_events.append(key)
+        if getattr(self.game, "sfx", None):
+            self.game.sfx.play(key, min_interval=min_interval)
 
     # -- Vagues ----------------------------------------------------------------
     def _start_new_wave(self):
@@ -774,6 +898,7 @@ class BaseRoom:
                     self.float_texts.add(player.rect.centerx, player.rect.top-20,
                                          f"{label_prefix}+ {chest.weapon_inside}!", GOLD)
                     self.show_chest_hint = False
+                    self._emit_sound("ouverture_coffre")
                     return True
         return False
 
@@ -801,6 +926,9 @@ class BaseRoom:
                 self.particles.emit_magic(self.player.rect.centerx, self.player.rect.centery, GOLD, 16)
         else:
             self.player.revive_progress = 0
+
+        if p2_interact and not can_p2_revive:
+            self._try_open_chest_for_player(self.player2, "P2 ")
 
     def _draw_revive_prompt(self, surface, target, ox, oy, label):
         if not target or not target.is_downed:
@@ -840,19 +968,32 @@ class BaseRoom:
         def se(e):
             return {'i':id(e),'x':e.rect.centerx,'y':e.rect.centery,
                     'h':int(e.health),'m':int(e.max_health),
-                    't':e.enemy_type,'z':e.size}
+                    't':e.enemy_type,'z':e.size,
+                    'an':getattr(e, '_anim_state', 'idle'),
+                    'af':int(getattr(e, '_anim_frame', 0)),
+                    'fr':1 if getattr(e, 'facing_right', True) else 0}
         return {
             'v':2,'f':self._network_frame,
             'ep':self.epoch_key,'wv':self.wave,
             'wc':1 if self.wave_complete else 0,'bw':1 if self.boss_wave else 0,
             'el':len(self.enemies),'sh':1 if self.show_chest_hint else 0,
             'oh':self.objective_hint,
+            'sx':list(self._sound_events),
+            'mk':'defeat' if self._network_game_over else ('game_boss' if self.boss_wave else 'game_normal'),
             'go':1 if self._network_game_over else 0,'ne':self._network_next_epoch,
             'p1':sp(self.player) if self.player else None,
             'p2':sp(self.player2) if self.player2 else None,
             'en':[se(e) for e in self.enemies],
-            'bu':[[b.rect.centerx,b.rect.centery] for b in self.bullets],
-            'eb':[[b.rect.centerx,b.rect.centery] for b in self.enemy_bullets],
+            'bu':[{'x':b.rect.centerx,'y':b.rect.centery,
+                   'w':getattr(b, 'weapon_key', None),
+                   'a':int(getattr(b, 'angle', 0))}
+                  for b in self.bullets],
+            'eb':[{'x':b.rect.centerx,'y':b.rect.centery,
+                   'a':int(getattr(b, 'angle', 0)),
+                   'sp':'/'.join(getattr(b, 'sprite_path', ())) if getattr(b, 'sprite_path', None) else None,
+                   'sz':list(getattr(b, 'render_size')) if isinstance(getattr(b, 'render_size', None), tuple)
+                        else getattr(b, 'render_size', None)}
+                  for b in self.enemy_bullets],
             'pu':[[p.rect.centerx,p.rect.centery,p.type] for p in self.powerups],
             'ch':[[c.rect.centerx,c.rect.centery,1 if c.opened else 0] for c in self.chests],
         }
@@ -887,6 +1028,7 @@ class BaseRoom:
         self._network_game_over=False
         self._network_next_epoch=None
         self.objective_hint=""
+        self._sound_events = []
 
         p1_downed=self.player.is_downed
         p2_downed=(self.player2 is None) or self.player2.is_downed
@@ -896,11 +1038,17 @@ class BaseRoom:
 
         keys=pygame.key.get_pressed()
         p1_interact = bool(keys[pygame.K_e])
+        p1_was_dashing = self.player.dashing
+        p2_was_dashing = self.player2.dashing if self.player2 else False
         # Mettre a jour P1 (local)
         self.player.update(keys)
+        if not p1_was_dashing and self.player.dashing:
+            self._emit_sound("dash", min_interval=0.05)
         # Mettre a jour P2 reseau (flags poses par apply_p2_network_inputs)
         if self.mode=="server" and self.player2:
             self.player2.update_as_p2_server()
+            if not p2_was_dashing and self.player2.dashing:
+                self._emit_sound("dash", min_interval=0.05)
             self._update_revive_state(p1_interact)
 
         # -- CORRECTIF ITERATION -----------------------------------------------
@@ -945,6 +1093,7 @@ class BaseRoom:
                     bullet_killed = True
                     dmg = bullet.damage
                     enemy.health -= dmg
+                    self._emit_sound("degats_monstres", min_interval=0.04)
                     self.float_texts.add_damage(enemy.rect.centerx, enemy.rect.top-10, dmg)
                     self.particles.emit_blood(enemy.rect.centerx, enemy.rect.centery)
                     if enemy.health <= 0:
@@ -968,6 +1117,7 @@ class BaseRoom:
                     melee.hit_enemies.add(enemy)
                     dmg = melee.damage
                     enemy.health -= dmg
+                    self._emit_sound("degats_monstres", min_interval=0.04)
                     self.float_texts.add_damage(enemy.rect.centerx, enemy.rect.top-10, dmg)
                     self.screen_fx.shake(4, 8)
                     if enemy.health <= 0:
@@ -997,6 +1147,7 @@ class BaseRoom:
         # Power-ups -> P1
         for pu in pygame.sprite.spritecollide(self.player,self.powerups,True):
             self.player.apply_powerup(pu.type)
+            self._emit_sound("powerup", min_interval=0.05)
             label={"damage":"+DMG","speed":"+SPD","health":"+HP","stamina":"+STA"}.get(pu.type,"?")
             col={"damage":RED,"speed":CYAN,"health":(60,220,80),"stamina":BLUE}.get(pu.type,WHITE)
             self.float_texts.add(self.player.rect.centerx,self.player.rect.top-30,label,col,22)
@@ -1005,6 +1156,7 @@ class BaseRoom:
         if self.mode=="server" and self.player2 and self.player2.health>0:
             for pu in pygame.sprite.spritecollide(self.player2,self.powerups,True):
                 self.player2.apply_powerup(pu.type)
+                self._emit_sound("powerup", min_interval=0.05)
                 label={"damage":"+DMG","speed":"+SPD","health":"+HP","stamina":"+STA"}.get(pu.type,"?")
                 col={"damage":RED,"speed":CYAN,"health":(60,220,80),"stamina":BLUE}.get(pu.type,WHITE)
                 self.float_texts.add(self.player2.rect.centerx,self.player2.rect.top-30,f"P2 {label}",col,22)

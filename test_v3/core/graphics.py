@@ -58,6 +58,229 @@ class SpriteCache:
         self._cache[key] = img
         return img
 
+    def load_sheet(self, *path_parts, cols=3, rows=3, size=None, alpha=True, trim=True):
+        """Charge et decoupe une sprite sheet en grille reguliere."""
+        key = ("sheet", path_parts, cols, rows, size, alpha, trim)
+        if key in self._cache:
+            return self._cache[key]
+
+        full_path = get_asset_path(*path_parts)
+        try:
+            if alpha:
+                sheet = pygame.image.load(full_path).convert_alpha()
+            else:
+                sheet = pygame.image.load(full_path).convert()
+        except Exception:
+            fallback = [[self._make_fallback(size or (64, 64), path_parts) for _ in range(cols)]
+                        for _ in range(rows)]
+            self._cache[key] = fallback
+            return fallback
+
+        sheet_w, sheet_h = sheet.get_size()
+        frames = []
+        for row in range(rows):
+            row_frames = []
+            top = round(row * sheet_h / rows)
+            bottom = round((row + 1) * sheet_h / rows)
+            for col in range(cols):
+                left = round(col * sheet_w / cols)
+                right = round((col + 1) * sheet_w / cols)
+                cell_rect = pygame.Rect(left, top, right - left, bottom - top)
+                cell = pygame.Surface(cell_rect.size, pygame.SRCALPHA)
+                cell.blit(sheet, (0, 0), cell_rect)
+
+                if trim:
+                    bbox = cell.get_bounding_rect(min_alpha=1)
+                    if bbox.width > 0 and bbox.height > 0:
+                        trimmed = pygame.Surface((bbox.width, bbox.height), pygame.SRCALPHA)
+                        trimmed.blit(cell, (0, 0), bbox)
+                    else:
+                        trimmed = cell
+                else:
+                    trimmed = cell
+
+                if size:
+                    max_w = max(1, size[0] - 4)
+                    max_h = max(1, size[1] - 4)
+                    ratio = min(max_w / trimmed.get_width(), max_h / trimmed.get_height())
+                    scaled_size = (
+                        max(1, int(trimmed.get_width() * ratio)),
+                        max(1, int(trimmed.get_height() * ratio)),
+                    )
+                    trimmed = pygame.transform.scale(trimmed, scaled_size)
+                    frame = pygame.Surface(size, pygame.SRCALPHA)
+                    frame.blit(
+                        trimmed,
+                        ((size[0] - trimmed.get_width()) // 2, size[1] - trimmed.get_height()),
+                    )
+                else:
+                    frame = trimmed
+                row_frames.append(frame)
+            frames.append(row_frames)
+
+        self._cache[key] = frames
+        return frames
+
+    def load_frames(self, *path_parts, frame_rects, size=None, alpha=True, trim=True, common_scale=False,
+                    bbox_anchor=False):
+        """Charge une sprite sheet et extrait une liste de frames explicites."""
+        key = ("frames", path_parts, tuple(tuple(r) for r in frame_rects), size, alpha, trim, common_scale, bbox_anchor)
+        if key in self._cache:
+            return self._cache[key]
+
+        full_path = get_asset_path(*path_parts)
+        try:
+            if alpha:
+                sheet = pygame.image.load(full_path).convert_alpha()
+            else:
+                sheet = pygame.image.load(full_path).convert()
+        except Exception:
+            fallback = [self._make_fallback(size or (64, 64), path_parts) for _ in frame_rects]
+            self._cache[key] = fallback
+            return fallback
+
+        prepared = []
+        common_w = max((rect[2] for rect in frame_rects), default=1)
+        common_h = max((rect[3] for rect in frame_rects), default=1)
+        common_ratio = None
+        if size and common_scale:
+            max_w = max(1, size[0] - 4)
+            max_h = max(1, size[1] - 4)
+            common_ratio = min(max_w / common_w, max_h / common_h)
+        for left, top, width, height in frame_rects:
+            cell = pygame.Surface((width, height), pygame.SRCALPHA)
+            cell.blit(sheet, (0, 0), pygame.Rect(left, top, width, height))
+            bbox = cell.get_bounding_rect(min_alpha=1)
+            prepared.append((cell, bbox, width, height))
+
+        ref_center_x = None
+        ref_bottom_y = None
+        if size and bbox_anchor and prepared:
+            centers = []
+            bottoms = []
+            for _, bbox, width, height in prepared:
+                ratio = common_ratio if common_ratio is not None else min(
+                    max(1, size[0] - 4) / max(1, width),
+                    max(1, size[1] - 4) / max(1, height),
+                )
+                base_x = (size[0] - width * ratio) / 2
+                base_y = size[1] - height * ratio
+                centers.append(base_x + ((bbox.left + bbox.right) / 2) * ratio)
+                bottoms.append(base_y + bbox.bottom * ratio)
+            ref_center_x = sum(centers) / len(centers)
+            ref_bottom_y = max(bottoms)
+
+        frames = []
+        for cell, bbox, width, height in prepared:
+            if trim:
+                if bbox.width > 0 and bbox.height > 0:
+                    trimmed = pygame.Surface((bbox.width, bbox.height), pygame.SRCALPHA)
+                    trimmed.blit(cell, (0, 0), bbox)
+                else:
+                    trimmed = cell
+            else:
+                trimmed = cell
+
+            if size:
+                if common_ratio is not None:
+                    ratio = common_ratio
+                else:
+                    max_w = max(1, size[0] - 4)
+                    max_h = max(1, size[1] - 4)
+                    ratio = min(max_w / trimmed.get_width(), max_h / trimmed.get_height())
+                scaled_size = (
+                    max(1, int(trimmed.get_width() * ratio)),
+                    max(1, int(trimmed.get_height() * ratio)),
+                )
+                trimmed = pygame.transform.scale(trimmed, scaled_size)
+                frame = pygame.Surface(size, pygame.SRCALPHA)
+                if bbox_anchor and not trim and ref_center_x is not None and ref_bottom_y is not None:
+                    target_x = ref_center_x - ((bbox.left + bbox.right) / 2) * ratio
+                    target_y = ref_bottom_y - bbox.bottom * ratio
+                    frame.blit(trimmed, (int(round(target_x)), int(round(target_y))))
+                else:
+                    frame.blit(
+                        trimmed,
+                        ((size[0] - trimmed.get_width()) // 2, size[1] - trimmed.get_height()),
+                    )
+            else:
+                frame = trimmed
+            frames.append(frame)
+
+        self._cache[key] = frames
+        return frames
+
+    def load_gif_frames(self, *path_parts, size=None, trim=True, bg_key_from_corner=True):
+        """Charge toutes les frames d'un GIF en surfaces pygame."""
+        key = ("gif_frames", path_parts, size, trim, bg_key_from_corner)
+        if key in self._cache:
+            return self._cache[key]
+
+        try:
+            from PIL import Image, ImageChops, ImageSequence
+        except Exception:
+            fallback = [self._make_fallback(size or (64, 64), path_parts)]
+            self._cache[key] = fallback
+            return fallback
+
+        full_path = get_asset_path(*path_parts)
+        try:
+            gif = Image.open(full_path)
+        except Exception:
+            fallback = [self._make_fallback(size or (64, 64), path_parts)]
+            self._cache[key] = fallback
+            return fallback
+
+        frames = []
+        for frame in ImageSequence.Iterator(gif):
+            rgba = frame.convert("RGBA")
+            if bg_key_from_corner:
+                bg = rgba.getpixel((0, 0))
+                bg_rgb = Image.new("RGB", rgba.size, bg[:3])
+                diff = ImageChops.difference(rgba.convert("RGB"), bg_rgb)
+                mask = diff.convert("L").point(lambda v: 0 if v == 0 else 255)
+                rgba.putalpha(mask)
+
+            mode = rgba.mode
+            data = rgba.tobytes()
+            surf = pygame.image.fromstring(data, rgba.size, mode).convert_alpha()
+
+            if trim:
+                bbox = surf.get_bounding_rect(min_alpha=1)
+                if bbox.width > 0 and bbox.height > 0:
+                    trimmed = pygame.Surface((bbox.width, bbox.height), pygame.SRCALPHA)
+                    trimmed.blit(surf, (0, 0), bbox)
+                else:
+                    trimmed = surf
+            else:
+                trimmed = surf
+
+            if size:
+                max_w = max(1, size[0] - 4)
+                max_h = max(1, size[1] - 4)
+                ratio = min(max_w / trimmed.get_width(), max_h / trimmed.get_height())
+                scaled_size = (
+                    max(1, int(trimmed.get_width() * ratio)),
+                    max(1, int(trimmed.get_height() * ratio)),
+                )
+                trimmed = pygame.transform.scale(trimmed, scaled_size)
+                canvas = pygame.Surface(size, pygame.SRCALPHA)
+                canvas.blit(
+                    trimmed,
+                    ((size[0] - trimmed.get_width()) // 2, size[1] - trimmed.get_height()),
+                )
+                surf = canvas
+            else:
+                surf = trimmed
+
+            frames.append(surf)
+
+        if not frames:
+            frames = [self._make_fallback(size or (64, 64), path_parts)]
+
+        self._cache[key] = frames
+        return frames
+
     def load_weapon(self, weapon_key, size=None):
         data = WEAPONS_DATA.get(weapon_key, {})
         sprite_path = data.get("sprite")

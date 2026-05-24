@@ -9,9 +9,17 @@ from pathlib import Path
 # --------------------------------------------------
 BASE_PATH   = Path(__file__).parent.parent
 ASSETS_PATH = BASE_PATH / "assets"
+ASSETS2_PATH = BASE_PATH / "assets2"
 
 def get_asset_path(*parts):
-    return str(ASSETS_PATH / Path(*parts))
+    rel_path = Path(*parts)
+    primary = ASSETS_PATH / rel_path
+    if primary.exists():
+        return str(primary)
+    secondary = ASSETS2_PATH / rel_path
+    if secondary.exists():
+        return str(secondary)
+    return str(primary)
 
 # --------------------------------------------------
 #  RESOLUTION  (recuperee dynamiquement)
@@ -355,9 +363,34 @@ WEAPONS_DATA = {
 # --------------------------------------------------
 ENEMY_CONFIG = {
     "prehistoire": {
-        "tank":   {"health": 200, "speed": 2.5, "damage": 15, "size": 95},
-        "rusher": {"health":  55, "speed": 7.5, "damage":  8, "size": 60},
-        "sniper": {"health":  90, "speed": 3.5, "damage": 10, "size": 75},
+        "tank":   {
+            "health": 200, "speed": 2.5, "damage": 15, "size": 160,
+            "sprite": ("tank_prehistoire.png",), "sheet": True,
+            "sheet_trim": False, "sheet_common_scale": True, "sheet_bbox_anchor": True,
+            "sheet_frames": {
+                "idle":   [(0, 0, 125, 166), (125, 0, 125, 166), (250, 0, 125, 166), (375, 0, 125, 166)],
+                "walk":   [(0, 166, 166, 166), (166, 166, 166, 166), (332, 166, 168, 166)],
+                "attack": [(0, 332, 166, 168), (166, 332, 166, 168), (332, 332, 168, 168)],
+            },
+        },
+        "rusher": {
+            "health":  55, "speed": 7.5, "damage":  8, "size": 90,
+            "sprite": ("rusher_prehistoire.png",), "sheet": True,
+            "sheet_frames": {
+                "idle":   [(0, 0, 166, 166), (166, 0, 166, 166), (332, 0, 168, 166)],
+                "walk":   [(0, 166, 166, 166), (166, 166, 166, 166), (332, 166, 168, 166)],
+                "attack": [(0, 332, 166, 168), (166, 332, 166, 168), (332, 332, 168, 168)],
+            },
+        },
+        "sniper": {
+            "health":  90, "speed": 3.5, "damage": 10, "size": 80,
+            "sprite": ("lanceur_prehistoire.png",), "sheet": True,
+            "gif_animations": {
+                "idle":   ("Anim", "Anim", "1 Rest.GIF"),
+                "walk":   ("Anim", "Anim", "2 running.GIF"),
+                "attack": ("Anim", "Anim", "6 spear attack.GIF"),
+            },
+        },
         "boss":   {"health": 900, "speed": 4,   "damage": 22, "size": 170},
     },
     "grece": {

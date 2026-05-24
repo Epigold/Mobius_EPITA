@@ -105,7 +105,7 @@ import threading
 import time
 import math
 import pygame
-from .constants import EPOCHS, SKILLS, GOLD, RED, WHITE, SCREEN_WIDTH, SCREEN_HEIGHT
+from .constants import EPOCHS, ENEMY_CONFIG, SKILLS, GOLD, RED, WHITE, SCREEN_WIDTH, SCREEN_HEIGHT
 from .graphics import draw_weapon_in_hand, tint_surface
 
 # -- Constantes reseau ---------------------------------------------------------
@@ -622,9 +622,8 @@ class ClientRenderer:
                 pygame.draw.circle(surf, (200, 200, 255), (40, 40), 35)
                 self._player_sprites[state] = surf
 
-        # Cache des surfaces d'ennemis proceduraux (id ennemi -> surface)
-        # Evite de regenerer le sprite a chaque frame
-        self._enemy_surf_cache: dict[int, pygame.Surface] = {}
+        self._enemy_anim_cache: dict[tuple, dict[str, list[pygame.Surface]]] = {}
+        self._projectile_cache: dict[tuple, pygame.Surface] = {}
 
         # Police pour les textes HUD client
         self._font_md = pygame.font.Font(None, 30)
@@ -669,6 +668,9 @@ class ClientRenderer:
                 'max_health': int(edata.get('m', 1)),
                 'type': edata.get('t', 'rusher'),
                 'size': int(edata.get('z', 40)),
+                'anim_state': edata.get('an', 'idle'),
+                'anim_frame': int(edata.get('af', 0)),
+                'facing_right': bool(edata.get('fr', 1)),
             })
         return out
 
@@ -694,6 +696,8 @@ class ClientRenderer:
             'wave': int(state.get('wv', 1)),
             'wave_complete': bool(state.get('wc', 0)),
             'boss_wave': bool(state.get('bw', 0)),
+            'music_key': state.get('mk'),
+            'sound_events': list(state.get('sx', [])),
             'enemies_left': int(state.get('el', 0)),
             'show_chest_hint': bool(state.get('sh', 0)),
             'objective_hint': state.get('oh', ''),
@@ -760,16 +764,13 @@ class ClientRenderer:
                 # Serrure
                 pygame.draw.rect(surface, (255, 215, 0), (cx-6, cy-8, 12, 10), border_radius=2)
 
-        # -- 4. Projectiles joueurs (petits cercles blancs) --------------------
+        # -- 4. Projectiles joueurs --------------------------------------------
         for b in state.get('bullets', []):
-            pygame.draw.circle(surface, (255, 255, 200), (b['x'], b['y']), 6)
-            pygame.draw.circle(surface, (255, 220, 0),   (b['x'], b['y']), 6, 1)
+            self._draw_projectile(surface, b, enemy=False)
 
-        # -- 5. Balles ennemies (petits cercles rouges) ------------------------
-        enemy_col = EPOCHS.get(epoch, {}).get('enemy_tint', (200, 0, 0))
+        # -- 5. Balles ennemies -----------------------------------------------
         for b in state.get('enemy_bullets', []):
-            pygame.draw.circle(surface, enemy_col, (b['x'], b['y']), 7)
-            pygame.draw.circle(surface, (255,255,255), (b['x'], b['y']), 7, 1)
+            self._draw_projectile(surface, b, enemy=True, epoch=epoch)
 
         # -- 6. Ennemis --------------------------------------------------------
         for edata in state.get('enemies', []):
@@ -864,20 +865,9 @@ class ClientRenderer:
         size  = edata['size']
         x, y  = edata['x'], edata['y']
 
-        # Recuperer ou creer le sprite procedural en cache
-        if eid not in self._enemy_surf_cache:
-            col  = EPOCHS.get(epoch, {}).get('enemy_tint', (180, 80, 80))
-            surf = self._build_enemy_surf(etype, size, col)
-            self._enemy_surf_cache[eid] = surf
-
-            # Nettoyer le cache si trop grand (ennemis morts pas retires)
-            if len(self._enemy_surf_cache) > 200:
-                # Garder seulement les 100 plus recents
-                keys = list(self._enemy_surf_cache.keys())
-                for k in keys[:100]:
-                    del self._enemy_surf_cache[k]
-
-        surf = self._enemy_surf_cache[eid]
+        surf = self._get_enemy_frame(epoch, etype, size, edata.get('anim_state', 'idle'), edata.get('anim_frame', 0))
+        if not edata.get('facing_right', True):
+            surf = pygame.transform.flip(surf, True, False)
         surface.blit(surf, (x - size//2, y - size//2))
 
         # Barre de vie au-dessus
@@ -929,6 +919,78 @@ class ClientRenderer:
         else:
             pygame.draw.circle(surf, (r, g, b), (s//2, s//2), s//2-2)
         return surf
+
+    def _get_enemy_frame(self, epoch: str, etype: str, size: int, anim_state: str, anim_frame: int) -> pygame.Surface:
+        key = (epoch, etype, size)
+        frames = self._enemy_anim_cache.get(key)
+        if frames is None:
+            cfg = ENEMY_CONFIG.get(epoch, ENEMY_CONFIG["prehistoire"]).get(etype, {})
+            sprite_path = cfg.get("sprite")
+            if sprite_path and (cfg.get("gif_animations") or cfg.get("sheet_frames")):
+                if cfg.get("gif_animations"):
+                    frames = {
+                        state: self._cache.load_gif_frames(*anim_path, size=(size, size))
+                        for state, anim_path in cfg["gif_animations"].items()
+                    }
+                else:
+                    trim = bool(cfg.get("sheet_trim", True))
+                    common_scale = bool(cfg.get("sheet_common_scale", False))
+                    bbox_anchor = bool(cfg.get("sheet_bbox_anchor", False))
+                    frames = {
+                        state: self._cache.load_frames(
+                            *sprite_path,
+                            frame_rects=rects,
+                            size=(size, size),
+                            trim=trim,
+                            common_scale=common_scale,
+                            bbox_anchor=bbox_anchor,
+                        )
+                        for state, rects in cfg["sheet_frames"].items()
+                    }
+            else:
+                col = EPOCHS.get(epoch, {}).get('enemy_tint', (180, 80, 80))
+                frames = {'idle': [self._build_enemy_surf(etype, size, col)]}
+            self._enemy_anim_cache[key] = frames
+
+        seq = frames.get(anim_state) or frames.get('idle') or next(iter(frames.values()))
+        return seq[min(max(anim_frame, 0), len(seq) - 1)]
+
+    def _draw_projectile(self, surface: pygame.Surface, pdata: dict, enemy: bool, epoch: str | None = None):
+        x, y = pdata['x'], pdata['y']
+        angle = int(pdata.get('a', 0))
+
+        if not enemy and pdata.get('w'):
+            weapon_key = pdata['w']
+            cache_key = ('player', weapon_key)
+            img = self._projectile_cache.get(cache_key)
+            if img is None:
+                weapon = Weapon(weapon_key)
+                proj_size = max(20, weapon.size // 2)
+                img = pygame.transform.scale(weapon.image, (proj_size, proj_size))
+                self._projectile_cache[cache_key] = img
+            rotated = pygame.transform.rotate(img, angle)
+            surface.blit(rotated, rotated.get_rect(center=(x, y)))
+            return
+
+        if enemy and pdata.get('sp'):
+            sprite_parts = tuple(str(pdata['sp']).split('/'))
+            render_size = pdata.get('sz') or (22, 22)
+            if isinstance(render_size, int):
+                render_size = (render_size, render_size)
+            cache_key = ('enemy', sprite_parts, tuple(render_size))
+            img = self._projectile_cache.get(cache_key)
+            if img is None:
+                img = self._cache.load(*sprite_parts, size=tuple(render_size))
+                self._projectile_cache[cache_key] = img
+            rotated = pygame.transform.rotate(img, angle)
+            surface.blit(rotated, rotated.get_rect(center=(x, y)))
+            return
+
+        color = EPOCHS.get(epoch or 'prehistoire', {}).get('enemy_tint', (200, 0, 0)) if enemy else (255, 255, 200)
+        radius = 7 if enemy else 6
+        outline = (255, 255, 255) if enemy else (255, 220, 0)
+        pygame.draw.circle(surface, color, (x, y), radius)
+        pygame.draw.circle(surface, outline, (x, y), radius, 1)
 
     def _draw_client_hud(self, surface, p2, epoch, wave, wave_complete, boss_wave, enemies_left):
         """Dessine notre HUD (P2) en bas a gauche, similaire au HUD standard."""
