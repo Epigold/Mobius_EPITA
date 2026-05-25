@@ -343,6 +343,7 @@ class Player(pygame.sprite.Sprite):
             if self._sound_callback: self._sound_callback("berserker_power")
         elif self.skill == "vampire":
             self.skill_active=True; self.skill_duration=600; self.skill_cooldown=900
+            if self._sound_callback: self._sound_callback("pouvoir_vampire")
         elif self.skill == "ninja":
             # P1 : teleportation souris  -  P2 reseau : teleportation en avant
             if self._network_controlled:

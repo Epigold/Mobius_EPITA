@@ -157,6 +157,7 @@ class SoundManager:
         "ninja_tp": SONS_PATH / "effets" / "ninja_tp.mp3",
         "ouverture_coffre": SONS_PATH / "effets" / "ouverture_coffre.mp3",
         "pouvoir_mage": SONS_PATH / "effets" / "pouvoir_mage.mp3",
+        "pouvoir_vampire": SONS_PATH / "effets" / "pouvoir_vampire.mp3",
         "powerup": SONS_PATH / "effets" / "powerup.mp3",
     }
 
