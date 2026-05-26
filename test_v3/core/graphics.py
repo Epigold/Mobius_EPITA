@@ -41,6 +41,13 @@ class SpriteCache:
     def __init__(self):
         self._cache = {}
 
+    def asset_exists(self, *path_parts) -> bool:
+        """Retourne True si l'asset existe sur disque pour ce client/host local."""
+        try:
+            return Path(get_asset_path(*path_parts)).is_file()
+        except Exception:
+            return False
+
     def load(self, *path_parts, size=None, alpha=True):
         """Charge un sprite (avec cache). size=(w,h) optionnel."""
         key = (path_parts, size)
@@ -283,6 +290,68 @@ class SpriteCache:
 
         self._cache[key] = frames
         return frames
+
+    def load_gif_frames_optional(self, *path_parts, size=None, trim=True, bg_key_from_corner=True):
+        """
+        Variante stricte : retourne None si le GIF n'est pas reellement chargeable.
+        Permet aux appelants d'utiliser un vrai fallback PNG/sheet.
+        """
+        try:
+            from PIL import Image, ImageChops, ImageSequence
+        except Exception:
+            return None
+
+        full_path = get_asset_path(*path_parts)
+        try:
+            gif = Image.open(full_path)
+        except Exception:
+            return None
+
+        frames = []
+        for frame in ImageSequence.Iterator(gif):
+            rgba = frame.convert("RGBA")
+            if bg_key_from_corner:
+                bg = rgba.getpixel((0, 0))
+                bg_rgb = Image.new("RGB", rgba.size, bg[:3])
+                diff = ImageChops.difference(rgba.convert("RGB"), bg_rgb)
+                mask = diff.convert("L").point(lambda v: 0 if v == 0 else 255)
+                rgba.putalpha(mask)
+
+            mode = rgba.mode
+            data = rgba.tobytes()
+            surf = pygame.image.fromstring(data, rgba.size, mode).convert_alpha()
+
+            if trim:
+                bbox = surf.get_bounding_rect(min_alpha=1)
+                if bbox.width > 0 and bbox.height > 0:
+                    trimmed = pygame.Surface((bbox.width, bbox.height), pygame.SRCALPHA)
+                    trimmed.blit(surf, (0, 0), bbox)
+                else:
+                    trimmed = surf
+            else:
+                trimmed = surf
+
+            if size:
+                max_w = max(1, size[0] - 4)
+                max_h = max(1, size[1] - 4)
+                ratio = min(max_w / trimmed.get_width(), max_h / trimmed.get_height())
+                scaled_size = (
+                    max(1, int(trimmed.get_width() * ratio)),
+                    max(1, int(trimmed.get_height() * ratio)),
+                )
+                trimmed = pygame.transform.scale(trimmed, scaled_size)
+                canvas = pygame.Surface(size, pygame.SRCALPHA)
+                canvas.blit(
+                    trimmed,
+                    ((size[0] - trimmed.get_width()) // 2, size[1] - trimmed.get_height()),
+                )
+                surf = canvas
+            else:
+                surf = trimmed
+
+            frames.append(surf)
+
+        return frames or None
 
     def load_strip_frames(self, *path_parts, size=None, alpha=True, trim=True, frame_width=None):
         """Charge une bande horizontale de frames de taille reguliere."""

@@ -498,10 +498,14 @@ class Enemy(pygame.sprite.Sprite):
                 strip_animations = self.cfg.get("strip_animations")
                 manual_frames = self.cfg.get("sheet_frames")
                 if gif_animations:
-                    self._sheet_frames = {
-                        state: cache.load_gif_frames(*anim_path, size=(self.size, self.size))
-                        for state, anim_path in gif_animations.items()
-                    }
+                    loaded = {}
+                    for state, anim_path in gif_animations.items():
+                        frames = cache.load_gif_frames_optional(*anim_path, size=(self.size, self.size))
+                        if not frames:
+                            loaded = {}
+                            break
+                        loaded[state] = frames
+                    self._sheet_frames = loaded
                 elif strip_animations:
                     self._sheet_frames = {
                         state: cache.load_strip_frames(

@@ -1516,8 +1516,6 @@ class Game:
         skill_edge = skill_pressed and not self._client_prev_buttons["skill"]
         fire_edge = fire_pressed and not self._client_prev_buttons["fire"]
         alt_fire_edge = alt_fire_pressed and not self._client_prev_buttons["alt_fire"]
-        chest_edge = chest_pressed and not self._client_prev_buttons["chest"]
-
         self._client_prev_buttons = {
             "dash": dash_pressed,
             "skill": skill_pressed,
@@ -1543,7 +1541,7 @@ class Game:
             "alt_fire":  alt_fire_edge,
             "fire_tx":   mx,
             "fire_ty":   my,
-            "chest":     chest_edge,
+            "chest":     chest_pressed,
             "weapon_idx": weapon_idx,
         }
 

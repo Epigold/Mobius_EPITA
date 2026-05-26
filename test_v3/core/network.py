@@ -115,6 +115,8 @@ RECV_BUFFER     = 65_535   # Taille du buffer de reception UDP (max theorique)
 SEND_BUFFER     = 65_535   # Taille du buffer d'envoi
 CONNECT_TIMEOUT = 10.0     # Secondes avant d'abandonner la tentative de connexion
 PING_INTERVAL   = 1.0      # Secondes entre deux pings de maintien de connexion
+HELLO_INTERVAL  = 0.75     # Reemettre le hello tant que le welcome n'est pas recu
+CONTROL_COPIES  = 3        # Redondance pour les messages UDP critiques ponctuels
 
 
 # ==============================================================================
@@ -291,8 +293,8 @@ class GameServer:
                 self.last_recv_time = time.time()
 
                 # Repondre avec "welcome" pour confirmer la connexion
-                self._send({'type': 'welcome',
-                            'msg':  'Connexion etablie !'}, addr)
+                self._send_redundant({'type': 'welcome',
+                                      'msg':  'Connexion etablie !'}, addr)
                 print(f"[SERVER] Client connecte depuis {addr[0]}:{addr[1]}")
                 print(f"[SERVER] P2 joue la classe : {self.p2_skill}")
 
@@ -348,7 +350,7 @@ class GameServer:
         Inclut la classe de P1 pour que le client puisse afficher les infos correctes.
         """
         if self.client_addr:
-            self._send({'type': 'start', 'p1_skill': p1_skill}, self.client_addr)
+            self._send_redundant({'type': 'start', 'p1_skill': p1_skill}, self.client_addr)
 
     def set_host_replay_vote(self, want: bool):
         self.host_replay_vote = bool(want)
@@ -363,7 +365,7 @@ class GameServer:
 
     def send_replay_status(self):
         if self.client_addr:
-            self._send({
+            self._send_redundant({
                 'type': 'replay_status',
                 'host_vote': self.host_replay_vote,
                 'client_vote': self.client_replay_vote,
@@ -372,7 +374,7 @@ class GameServer:
 
     def send_replay_begin(self, p1_skill: str):
         if self.client_addr:
-            self._send({'type': 'replay_begin', 'p1_skill': p1_skill}, self.client_addr)
+            self._send_redundant({'type': 'replay_begin', 'p1_skill': p1_skill}, self.client_addr)
 
     def is_client_timeout(self, timeout: float = 5.0) -> bool:
         """
@@ -388,11 +390,16 @@ class GameServer:
         except OSError:
             pass
 
+    def _send_redundant(self, msg: dict, addr: tuple, copies: int = CONTROL_COPIES):
+        """Duplique les messages ponctuels critiques pour compenser les pertes UDP."""
+        for _ in range(max(1, copies)):
+            self._send(msg, addr)
+
     def close(self):
         """Ferme le socket proprement."""
         try:
             if self.client_addr:
-                self._send({'type': 'bye'}, self.client_addr)
+                self._send_redundant({'type': 'bye'}, self.client_addr, copies=1)
             self.sock.close()
         except OSError:
             pass
@@ -438,6 +445,8 @@ class GameClient:
         self.client_replay_vote = False
         self.replay_begin = False
         self.remote_game_over = False
+        self._hello_skill = None
+        self._next_hello_time = 0.0
 
         # -- Dernier etat recu -------------------------------------------------
         # Dict serialise recu du serveur, utilise pour le rendu
@@ -460,7 +469,9 @@ class GameClient:
         skill : str -> cle de classe ("tank", "mage", ...)
         Le serveur repondra par "welcome" qui sera capture dans poll().
         """
-        self._send({'type': 'hello', 'skill': skill})
+        self._hello_skill = skill
+        self._next_hello_time = 0.0
+        self._send_hello(force=True)
         print(f"[CLIENT] Envoi hello au serveur (classe={skill})...")
 
     # -- Polling (non-bloquant, a appeler chaque frame) ------------------------
@@ -470,6 +481,8 @@ class GameClient:
         Lit tous les paquets UDP disponibles depuis le dernier poll().
         A appeler UNE FOIS PAR FRAME dans la boucle de rendu.
         """
+        if not self.connected:
+            self._send_hello()
         for _ in range(10):
             try:
                 data, _ = self.sock.recvfrom(RECV_BUFFER)
@@ -486,11 +499,12 @@ class GameClient:
 
             # -- Confirmation de connexion --------------------------------------
             if msg_type == 'welcome':
-                self.connected = True
+                self._mark_connected()
                 print(f"[CLIENT] Connecte au serveur !")
 
             # -- Signal de debut de partie --------------------------------------
             elif msg_type == 'start':
+                self._mark_connected()
                 self.p1_skill = msg.get('p1_skill')
                 self.started  = True
                 self._latest_frame = -1
@@ -499,11 +513,13 @@ class GameClient:
                 print(f"[CLIENT] Partie demarree ! P1 joue : {self.p1_skill}")
 
             elif msg_type == 'replay_status':
+                self._mark_connected()
                 self.host_replay_vote = bool(msg.get('host_vote', False))
                 self.client_replay_vote = bool(msg.get('client_vote', False))
                 self.remote_game_over = bool(msg.get('game_over', False))
 
             elif msg_type == 'replay_begin':
+                self._mark_connected()
                 self.p1_skill = msg.get('p1_skill', self.p1_skill)
                 self.replay_begin = True
                 self._latest_frame = -1
@@ -512,13 +528,13 @@ class GameClient:
 
             # -- Etat du jeu (chaque frame du serveur) --------------------------
             elif msg_type == 'state':
+                self._mark_connected()
                 state = msg.get('data', {})
                 frame = int(state.get('f', state.get('frame', -1) or -1))
                 with self._state_lock:
                     if frame >= self._latest_frame:
                         self._latest_state = state
                         self._latest_frame = frame
-                self.last_recv_time = time.time()
                 self.packets_received += 1
 
             # -- Deconnexion serveur --------------------------------------------
@@ -559,6 +575,19 @@ class GameClient:
     def is_server_timeout(self, timeout: float = 5.0) -> bool:
         """Retourne True si le serveur n'a pas repondu depuis `timeout` secondes."""
         return self.connected and (time.time() - self.last_recv_time > timeout)
+
+    def _mark_connected(self):
+        self.connected = True
+        self.last_recv_time = time.time()
+
+    def _send_hello(self, force: bool = False):
+        if self.connected or not self._hello_skill:
+            return
+        now = time.time()
+        if not force and now < self._next_hello_time:
+            return
+        self._send({'type': 'hello', 'skill': self._hello_skill})
+        self._next_hello_time = now + HELLO_INTERVAL
 
     def _send(self, msg: dict):
         """Envoie un message JSON au serveur. Ignore les erreurs reseau."""
@@ -937,13 +966,27 @@ class ClientRenderer:
         if frames is None:
             cfg = ENEMY_CONFIG.get(epoch, ENEMY_CONFIG["prehistoire"]).get(etype, {})
             sprite_path = cfg.get("sprite")
-            if sprite_path and (cfg.get("gif_animations") or cfg.get("sheet_frames")):
-                if cfg.get("gif_animations"):
+            gif_animations = cfg.get("gif_animations")
+            if sprite_path and (gif_animations or cfg.get("sheet_frames") or cfg.get("strip_animations") or cfg.get("sheet")):
+                if gif_animations:
+                    loaded = {}
+                    for state, anim_path in gif_animations.items():
+                        seq = self._cache.load_gif_frames_optional(*anim_path, size=(size, size))
+                        if not seq:
+                            loaded = {}
+                            break
+                        loaded[state] = seq
+                    frames = loaded or None
+                if frames is None and cfg.get("strip_animations"):
                     frames = {
-                        state: self._cache.load_gif_frames(*anim_path, size=(size, size))
-                        for state, anim_path in cfg["gif_animations"].items()
+                        state: self._cache.load_strip_frames(
+                            *anim_path,
+                            size=(size, size),
+                            frame_width=cfg.get("strip_frame_width"),
+                        )
+                        for state, anim_path in cfg["strip_animations"].items()
                     }
-                else:
+                elif frames is None and cfg.get("sheet_frames"):
                     trim = bool(cfg.get("sheet_trim", True))
                     common_scale = bool(cfg.get("sheet_common_scale", False))
                     bbox_anchor = bool(cfg.get("sheet_bbox_anchor", False))
@@ -957,6 +1000,20 @@ class ClientRenderer:
                             bbox_anchor=bbox_anchor,
                         )
                         for state, rects in cfg["sheet_frames"].items()
+                    }
+                elif frames is None and sprite_path:
+                    cols = int(cfg.get("sheet_cols", 3))
+                    rows_count = int(cfg.get("sheet_rows", 3))
+                    rows = self._cache.load_sheet(
+                        *sprite_path,
+                        cols=cols,
+                        rows=rows_count,
+                        size=(size, size),
+                    )
+                    frames = {
+                        "idle": rows[0],
+                        "walk": rows[1] if len(rows) > 1 else rows[0],
+                        "attack": rows[2] if len(rows) > 2 else rows[min(1, len(rows) - 1)],
                     }
             else:
                 col = EPOCHS.get(epoch, {}).get('enemy_tint', (180, 80, 80))
