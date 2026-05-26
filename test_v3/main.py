@@ -736,8 +736,10 @@ class WaitingRenderer:
         self.font_sm   = pygame.font.Font(None, 22)
         self._timer    = 0
 
-    def get_cancel_rect(self):
-        return pygame.Rect(self.w//2-self.BTN_W//2, self.h//2+140, self.BTN_W, self.BTN_H)
+    def get_cancel_rect(self, info_count=3):
+        info_count = max(1, info_count)
+        y = self.h//2 + 110 + info_count * 34
+        return pygame.Rect(self.w//2-self.BTN_W//2, y, self.BTN_W, self.BTN_H)
 
     def draw(self, surface, title_text: str, info_lines: list[str]):
         """
@@ -768,8 +770,9 @@ class WaitingRenderer:
             surface.blit(t, (self.w//2-t.get_width()//2, cy+60+i*30))
 
         # Bouton Annuler
-        draw_button(surface, self.get_cancel_rect(), "Annuler",
-                    self.get_cancel_rect().collidepoint(mouse), self.font_md,
+        cancel_rect = self.get_cancel_rect(len(info_lines))
+        draw_button(surface, cancel_rect, "Annuler",
+                    cancel_rect.collidepoint(mouse), self.font_md,
                     col_hover=(140,40,40), col_norm=(80,20,20))
 
 
@@ -962,7 +965,6 @@ class GameOverRenderer:
             for i, (text, color) in enumerate([
                 (f"Epoque : {epoch_name}", (180,200,255)),
                 (f"Ennemis elimines : {player.kills}", WHITE),
-                (f"Pieces collectees : {player.coins}", GOLD),
             ]):
                 t = self.font_md.render(text, True, color)
                 surface.blit(t, (cx-t.get_width()//2, title_y + 140 + i*42))
@@ -1180,7 +1182,7 @@ class Game:
         """Transition vers l'epoque suivante (host uniquement)."""
         if next_epoch and next_epoch in self.rooms and next_epoch != "None":
             p = self.current_room.player
-            stats = {"skill": p.skill, "kills": p.kills, "coins": p.coins,
+            stats = {"skill": p.skill, "kills": p.kills,
                      "health": p.health, "max_health": p.max_health,
                      "stamina": p.stamina, "max_stamina": p.max_stamina}
 
@@ -1188,7 +1190,7 @@ class Game:
             p2_stats = None
             if self.net_mode == "host" and self.current_room.player2:
                 p2 = self.current_room.player2
-                p2_stats = {"skill": p2.skill, "kills": p2.kills, "coins": p2.coins,
+                p2_stats = {"skill": p2.skill, "kills": p2.kills,
                             "health": p2.health, "max_health": p2.max_health,
                             "stamina": p2.stamina, "max_stamina": p2.max_stamina}
 

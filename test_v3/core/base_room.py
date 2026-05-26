@@ -44,7 +44,7 @@ class Player(pygame.sprite.Sprite):
         self.max_stamina = 100; self.stamina = 100
         self.stamina_regen = 0.25
         self.speed = 7
-        self.kills = 0; self.coins = 0
+        self.kills = 0
 
         # -- Buffs de classe ---------------------------------------------------
         if skill == "tank":     self.max_health = self.health = 150; self.speed = 5
@@ -357,10 +357,14 @@ class Player(pygame.sprite.Sprite):
             self.skill_cooldown=600
             if self._sound_callback: self._sound_callback("ninja_tp")
         elif self.skill == "mage" and self._bullets is not None and self._all_sprites is not None:
+            spell_weapon = Weapon("mage_power")
+            if self.current_weapon and self.current_weapon.type == "ranged":
+                spell_weapon.damage = self.current_weapon.damage
+                spell_weapon.projectile_speed = self.current_weapon.projectile_speed
             for deg in range(0,360,30):
                 rad=math.radians(deg)
                 tx=self.rect.centerx+math.cos(rad)*500; ty=self.rect.centery+math.sin(rad)*500
-                b=Bullet(self.rect.centerx,self.rect.centery,tx,ty,self.current_weapon,1.5,owner=self)
+                b=Bullet(self.rect.centerx,self.rect.centery,tx,ty,spell_weapon,1.5,owner=self)
                 self._bullets.add(b); self._all_sprites.add(b)
             self.skill_cooldown=1200
             if self._sound_callback: self._sound_callback("pouvoir_mage")
@@ -399,7 +403,6 @@ class Player(pygame.sprite.Sprite):
 
     def add_kill(self):
         self.kills += 1
-        if random.random() < 0.3: self.coins += 1
         if self.skill=="vampire" and self.skill_active:
             self.health = min(self.health+10, self.max_health)
 
@@ -667,7 +670,7 @@ class SniperEnemy(Enemy):
             self._set_anim_state("idle")
         self.shoot_cooldown-=1
         if self.shoot_cooldown<=0 and dist<=self.shoot_range:
-            bullet_sprite = ("weapons", "lance_prehistoire.png") if self.epoch_key == "prehistoire" else None
+            bullet_sprite = ("weapons", "prehistoire", "lance.png") if self.epoch_key == "prehistoire" else None
             bullet_size = (54, 20) if bullet_sprite else None
             b=EnemyBullet(self.rect.centerx,self.rect.centery,
                            self.player.rect.centerx,self.player.rect.centery,
@@ -816,7 +819,7 @@ class BaseRoom:
 
     def _restore_stats(self, player, stats):
         """Restaure les stats d'un joueur depuis un dict (transition d'epoque)."""
-        player.kills=stats.get("kills",0); player.coins=stats.get("coins",0)
+        player.kills=stats.get("kills",0)
         player.health=stats.get("health",player.max_health)
         player.max_health=stats.get("max_health",player.max_health)
         player.stamina=stats.get("stamina",player.max_stamina)
@@ -958,7 +961,7 @@ class BaseRoom:
             return {'x':p.rect.centerx,'y':p.rect.centery,
                     'h':round(p.health,1),'mh':p.max_health,
                     's':round(p.stamina,1),'ms':p.max_stamina,
-                    'k':p.kills,'c':p.coins,'fr':1 if p.facing_right else 0,
+                    'k':p.kills,'fr':1 if p.facing_right else 0,
                     'ax':int(p.aim_x),'ay':int(p.aim_y),
                     'an':p._anim_state,'sk':p.skill,
                     'w':p.current_weapon.key,'i':list(p.inventory),
@@ -1168,14 +1171,10 @@ class BaseRoom:
         if not self.wave_complete:
             if len(self.enemies)==0 and (self.boss_wave or self.enemies_spawned>=self.enemies_this_wave):
                 self.wave_complete=True; self.next_wave_timer=0
-                self.player.coins+=5
-                if self.player2: self.player2.coins+=5
                 if self.boss_wave:
                     chest_wk=self.weapons[1] if len(self.weapons)>1 else self.weapons[0]
                     chest=Chest(SCREEN_WIDTH//2,SCREEN_HEIGHT//2,chest_wk)
                     self.chests.add(chest); self.all_sprites.add(chest)
-                    self.player.coins+=10
-                    if self.player2: self.player2.coins+=10
                     self.on_exit()
         else:
             def near(p): return p and any(c.check_interaction(p.rect) and not c.opened for c in self.chests)

@@ -670,7 +670,7 @@ class HUDRenderer:
 
     def _draw_stats(self, surface, player):
         y = 122
-        kills_txt = self.font_sm.render(f"Kills {player.kills}   Coins {player.coins}", True, GOLD)
+        kills_txt = self.font_sm.render(f"Kills {player.kills}", True, GOLD)
         surface.blit(kills_txt, (self.BAR_X, y))
 
         # Boosts actifs

@@ -66,8 +66,7 @@ SCHEMA DE L'ETAT SERIALISE (envoye par le serveur chaque frame)
     "stamina"        : float,
     "max_stamina"    : int,
     "kills"          : int,
-    "coins"          : int,
-    "facing_right"   : bool,
+  "facing_right"   : bool,
     "anim_state"     : str,       # "idle" / "run"
     "skill"          : str,
     "weapon"         : str,
@@ -626,8 +625,8 @@ class ClientRenderer:
         self._enemy_anim_cache: dict[tuple, dict[str, list[pygame.Surface]]] = {}
         self._projectile_cache: dict[tuple, pygame.Surface] = {}
         chest = Chest(0, 0)
-        self._chest_closed = chest.image
-        self._chest_opened = chest._build_opened()
+        self._chest_closed_frames = list(chest._portal_frames)
+        self._chest_open_frames = list(chest._portal_open_frames)
 
         # Police pour les textes HUD client
         self._font_md = pygame.font.Font(None, 30)
@@ -646,7 +645,6 @@ class ClientRenderer:
             'stamina': float(pdata.get('s', 0)),
             'max_stamina': int(pdata.get('ms', 1)),
             'kills': int(pdata.get('k', 0)),
-            'coins': int(pdata.get('c', 0)),
             'facing_right': bool(pdata.get('fr', 1)),
             'aim_x': int(pdata.get('ax', pdata.get('x', 0))),
             'aim_y': int(pdata.get('ay', pdata.get('y', 0))),
@@ -768,7 +766,9 @@ class ClientRenderer:
         for chest in state.get('chests', []):
             cx, cy = chest['x'], chest['y']
             opened = bool(chest['opened'])
-            img = self._chest_opened if opened else self._chest_closed
+            frames = self._chest_open_frames if opened else self._chest_closed_frames
+            frame_idx = (pygame.time.get_ticks() // 100) % len(frames)
+            img = frames[frame_idx]
             rect = img.get_rect(center=(cx, cy))
             surface.blit(img, rect)
 
@@ -1011,7 +1011,6 @@ class ClientRenderer:
         fp.stamina     = p2['stamina']
         fp.max_stamina = p2['max_stamina']
         fp.kills       = p2['kills']
-        fp.coins       = p2['coins']
         fp.skill       = p2['skill']
         fp.inventory   = p2['inventory']
         fp.current_weapon = Weapon(p2['weapon']) if p2.get('weapon') else None
@@ -1069,7 +1068,6 @@ class ClientRenderer:
         fp.stamina = p1['stamina']
         fp.max_stamina = p1['max_stamina']
         fp.kills = p1['kills']
-        fp.coins = p1['coins']
         fp.skill = p1['skill']
         fp.inventory = p1['inventory']
         fp.current_weapon = Weapon(p1['weapon']) if p1.get('weapon') else None

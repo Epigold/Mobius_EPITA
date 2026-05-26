@@ -9,16 +9,10 @@ from pathlib import Path
 # --------------------------------------------------
 BASE_PATH   = Path(__file__).parent.parent
 ASSETS_PATH = BASE_PATH / "assets"
-ASSETS2_PATH = BASE_PATH / "assets2"
 
 def get_asset_path(*parts):
     rel_path = Path(*parts)
     primary = ASSETS_PATH / rel_path
-    if primary.exists():
-        return str(primary)
-    secondary = ASSETS2_PATH / rel_path
-    if secondary.exists():
-        return str(secondary)
     return str(primary)
 
 # --------------------------------------------------
@@ -287,6 +281,17 @@ WEAPONS_DATA = {
         "projectile_speed":  18,
         "size":              50,
     },
+    "mage_power": {
+        "name":              "Boule de Feu",
+        "sprite":            ("weapons", "mage_power.png"),
+        "fallback_color":    ORANGE,
+        "type":              "ranged",
+        "damage":            70,
+        "stamina_cost":      5,
+        "cooldown":          30,
+        "projectile_speed":  18,
+        "size":              140,
+    },
     # -- Moderne ----------------------------------
     "rifle": {
         "name":              "Carabine",
@@ -365,7 +370,7 @@ ENEMY_CONFIG = {
     "prehistoire": {
         "tank":   {
             "health": 200, "speed": 2.5, "damage": 15, "size": 160,
-            "sprite": ("tank_prehistoire.png",), "sheet": True,
+            "sprite": ("enemies", "prehistoire", "tank.png"), "sheet": True,
             "sheet_trim": False, "sheet_common_scale": True, "sheet_bbox_anchor": True,
             "sheet_frames": {
                 "idle":   [(0, 0, 125, 166), (125, 0, 125, 166), (250, 0, 125, 166), (375, 0, 125, 166)],
@@ -375,7 +380,7 @@ ENEMY_CONFIG = {
         },
         "rusher": {
             "health":  55, "speed": 7.5, "damage":  8, "size": 90,
-            "sprite": ("rusher_prehistoire.png",), "sheet": True,
+            "sprite": ("enemies", "prehistoire", "rusher.png"), "sheet": True,
             "sheet_frames": {
                 "idle":   [(0, 0, 166, 166), (166, 0, 166, 166), (332, 0, 168, 166)],
                 "walk":   [(0, 166, 166, 166), (166, 166, 166, 166), (332, 166, 168, 166)],
@@ -384,11 +389,11 @@ ENEMY_CONFIG = {
         },
         "sniper": {
             "health":  90, "speed": 3.5, "damage": 10, "size": 80,
-            "sprite": ("lanceur_prehistoire.png",), "sheet": True,
+            "sprite": ("enemies", "prehistoire", "sniper.png"), "sheet": True,
             "gif_animations": {
-                "idle":   ("Anim", "Anim", "1 Rest.GIF"),
-                "walk":   ("Anim", "Anim", "2 running.GIF"),
-                "attack": ("Anim", "Anim", "6 spear attack.GIF"),
+                "idle":   ("animations", "prehistoire", "sniper", "idle.gif"),
+                "walk":   ("animations", "prehistoire", "sniper", "walk.gif"),
+                "attack": ("animations", "prehistoire", "sniper", "attack_spear.gif"),
             },
         },
         "boss":   {"health": 900, "speed": 4,   "damage": 22, "size": 170},

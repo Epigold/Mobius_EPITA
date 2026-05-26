@@ -243,46 +243,43 @@ class PowerUp(pygame.sprite.Sprite):
 # ==============================================================================
 
 class Chest(pygame.sprite.Sprite):
-    W, H = 64, 52
+    W, H = 92, 92
+    _portal_frames = None
+    _portal_open_frames = None
+
+    @classmethod
+    def _load_portal_frames(cls):
+        if cls._portal_frames is not None and cls._portal_open_frames is not None:
+            return
+        frames = SpriteCache.get().load_sheet(
+            "items", "portal_blue_sheet.png",
+            cols=8, rows=1, size=(cls.W, cls.H), alpha=True, trim=True
+        )[0]
+        cls._portal_frames = frames
+        cls._portal_open_frames = []
+        for frame in frames:
+            glow = frame.copy()
+            glow.fill((140, 255, 200, 70), special_flags=pygame.BLEND_RGBA_ADD)
+            cls._portal_open_frames.append(glow)
 
     def __init__(self, x, y, weapon_inside="bone"):
         super().__init__()
+        self._load_portal_frames()
         self.weapon_inside = weapon_inside
         self.opened = False
         self._pulse = 0
-        self.image  = self._build_closed()
+        self._frame_idx = 0
+        self.image  = self._portal_frames[0]
         self.rect   = self.image.get_rect(center=(x, y))
 
-    def _build_closed(self):
-        surf = pygame.Surface((self.W, self.H), pygame.SRCALPHA)
-        # Corps
-        pygame.draw.rect(surf, DARK_BROWN, (2, 14, self.W - 4, self.H - 16), border_radius=5)
-        pygame.draw.rect(surf, BROWN,      (4, 16, self.W - 8, self.H - 20), border_radius=4)
-        # Couvercle
-        pygame.draw.rect(surf, (160, 90, 20), (2, 2, self.W - 4, 16), border_radius=4)
-        pygame.draw.rect(surf, (200, 120, 40), (4, 4, self.W - 8, 12), border_radius=3)
-        # Ferrures
-        pygame.draw.rect(surf, GOLD, (self.W // 2 - 6, 10, 12, 10), border_radius=2)
-        pygame.draw.line(surf, GOLD, (0, 14), (self.W, 14), 2)
-        # Glow
-        pygame.draw.rect(surf, (*GOLD, 60), surf.get_rect(), 3, border_radius=5)
-        return surf
-
-    def _build_opened(self):
-        surf = pygame.Surface((self.W, self.H), pygame.SRCALPHA)
-        pygame.draw.rect(surf, DARK_BROWN, (2, 14, self.W - 4, self.H - 16), border_radius=5)
-        pygame.draw.rect(surf, (40, 80, 40), (6, 18, self.W - 12, self.H - 24), border_radius=3)
-        pygame.draw.rect(surf, (160, 90, 20), (2, 2, self.W - 4, 16), border_radius=4)
-        pygame.draw.rect(surf, (60, 40, 10), (4, 4, self.W - 8, 10), border_radius=3)
-        pygame.draw.rect(surf, (80, 180, 80), (0, 0, self.W, self.H), 2, border_radius=5)
-        return surf
-
     def update(self, *args):
-        if not self.opened:
-            self._pulse += 1
-            # Legere pulsation de bordure
-            if self._pulse % 60 == 0:
-                pass  # pourrait ajouter un glow anime
+        self._pulse += 1
+        if self._pulse % 5 == 0:
+            frames = self._portal_open_frames if self.opened else self._portal_frames
+            self._frame_idx = (self._frame_idx + 1) % len(frames)
+            center = self.rect.center
+            self.image = frames[self._frame_idx]
+            self.rect = self.image.get_rect(center=center)
 
     def check_interaction(self, player_rect) -> bool:
         return not self.opened and self.rect.inflate(50, 50).colliderect(player_rect)
@@ -291,6 +288,6 @@ class Chest(pygame.sprite.Sprite):
         if not self.opened:
             self.opened = True
             player.add_weapon(self.weapon_inside)
-            self.image = self._build_opened()
+            self.image = self._portal_open_frames[self._frame_idx]
             return True
         return False
