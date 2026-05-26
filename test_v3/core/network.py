@@ -634,23 +634,24 @@ class ClientRenderer:
         self.hud         = HUDRenderer(screen_w, screen_h)
         self._cache      = SpriteCache.get()
 
-        # Pre-charger les sprites joueurs pour le rendu
+        # Pre-charger les memes sprites joueurs que cote host.
         self._player_sprites = {}
-        for state in ("idle", "run", "dead"):
-            if state == "idle":
-                name = "char_idle_one_arm"
-            elif state == "run":
-                name = "char_run1_one_arm"
-            else:
-                name = "char_dead_one_arm"
-            try:
-                self._player_sprites[state] = self._cache.load(
-                    "sprites_final", f"{name}.png", size=(80, 80))
-            except Exception:
-                # Fallback : cercle colore si l'image est introuvable
-                surf = pygame.Surface((80, 80), pygame.SRCALPHA)
-                pygame.draw.circle(surf, (200, 200, 255), (40, 40), 35)
-                self._player_sprites[state] = surf
+        player_frames = {
+            "idle": ["char_idle_one_arm"],
+            "walk": ["char_walk_one_arm"],
+            "run": ["char_run1_one_arm", "char_run2_one_arm", "char_run3_one_arm"],
+            "dead": ["char_dead_one_arm"],
+        }
+        for state, names in player_frames.items():
+            frames = []
+            for name in names:
+                try:
+                    frames.append(self._cache.load("sprites_final", f"{name}.png", size=(80, 80)))
+                except Exception:
+                    surf = pygame.Surface((80, 80), pygame.SRCALPHA)
+                    pygame.draw.circle(surf, (200, 200, 255), (40, 40), 35)
+                    frames.append(surf)
+            self._player_sprites[state] = frames
 
         self._enemy_anim_cache: dict[tuple, dict[str, list[pygame.Surface]]] = {}
         self._projectile_cache: dict[tuple, pygame.Surface] = {}
@@ -679,6 +680,7 @@ class ClientRenderer:
             'aim_x': int(pdata.get('ax', pdata.get('x', 0))),
             'aim_y': int(pdata.get('ay', pdata.get('y', 0))),
             'anim_state': pdata.get('an', 'idle'),
+            'anim_frame': int(pdata.get('af', 0)),
             'skill': pdata.get('sk'),
             'weapon': pdata.get('w', 'rock'),
             'inventory': list(pdata.get('i', ['rock'])),
@@ -872,7 +874,9 @@ class ClientRenderer:
         alpha = int(pdata.get('render_alpha', 255))
         if alpha <= 0:
             return
-        img   = self._player_sprites.get(state, self._player_sprites['idle']).copy()
+        seq = self._player_sprites.get(state) or self._player_sprites['idle']
+        frame_idx = min(max(int(pdata.get('anim_frame', 0)), 0), len(seq) - 1)
+        img = seq[frame_idx].copy()
 
         # Flip horizontal selon la direction regardee
         if not pdata.get('facing_right', True):
@@ -967,7 +971,9 @@ class ClientRenderer:
             cfg = ENEMY_CONFIG.get(epoch, ENEMY_CONFIG["prehistoire"]).get(etype, {})
             sprite_path = cfg.get("sprite")
             gif_animations = cfg.get("gif_animations")
-            if sprite_path and (gif_animations or cfg.get("sheet_frames") or cfg.get("strip_animations") or cfg.get("sheet")):
+            strip_animations = cfg.get("strip_animations")
+            manual_frames = cfg.get("sheet_frames")
+            if gif_animations or strip_animations or (manual_frames and sprite_path) or (cfg.get("sheet") and sprite_path):
                 if gif_animations:
                     loaded = {}
                     for state, anim_path in gif_animations.items():
@@ -981,16 +987,16 @@ class ClientRenderer:
                     col = EPOCHS.get(epoch, {}).get('enemy_tint', (180, 80, 80))
                     base = self._build_enemy_surf(etype, size, col)
                     frames = {'idle': [base], 'walk': [base], 'attack': [base]}
-                elif frames is None and cfg.get("strip_animations"):
+                elif frames is None and strip_animations:
                     frames = {
                         state: self._cache.load_strip_frames(
                             *anim_path,
                             size=(size, size),
                             frame_width=cfg.get("strip_frame_width"),
                         )
-                        for state, anim_path in cfg["strip_animations"].items()
+                        for state, anim_path in strip_animations.items()
                     }
-                elif frames is None and cfg.get("sheet_frames"):
+                elif frames is None and manual_frames and sprite_path:
                     trim = bool(cfg.get("sheet_trim", True))
                     common_scale = bool(cfg.get("sheet_common_scale", False))
                     bbox_anchor = bool(cfg.get("sheet_bbox_anchor", False))
@@ -1003,9 +1009,9 @@ class ClientRenderer:
                             common_scale=common_scale,
                             bbox_anchor=bbox_anchor,
                         )
-                        for state, rects in cfg["sheet_frames"].items()
+                        for state, rects in manual_frames.items()
                     }
-                elif frames is None and sprite_path:
+                elif frames is None and cfg.get("sheet") and sprite_path:
                     cols = int(cfg.get("sheet_cols", 3))
                     rows_count = int(cfg.get("sheet_rows", 3))
                     rows = self._cache.load_sheet(

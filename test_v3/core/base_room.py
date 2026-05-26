@@ -846,6 +846,15 @@ class BaseRoom:
         self._network_next_epoch=None
         self._network_frame=0
         self._boss_chest_opened=False
+        self.wave=0
+        self.wave_complete=False
+        self.boss_wave=False
+        self.boss_spawned=False
+        self.enemies_this_wave=0
+        self.enemies_spawned=0
+        self.spawn_timer=0
+        self.next_wave_timer=0
+        self.show_chest_hint=False
         self.objective_hint=""
         self._sound_events = []
         for grp in [self.all_sprites,self.enemies,self.bullets,
@@ -1027,6 +1036,7 @@ class BaseRoom:
                     'k':p.kills,'fr':1 if p.facing_right else 0,
                     'ax':int(p.aim_x),'ay':int(p.aim_y),
                     'an':p._anim_state,'sk':p.skill,
+                    'af':int(getattr(p, '_anim_frame', 0)),
                     'w':p.current_weapon.key,'i':list(p.inventory),
                     'dn':1 if p.is_downed else 0,'rv':p.revive_progress,
                     'ra':int(getattr(p, 'render_alpha', 255)),

@@ -299,13 +299,13 @@ class SpriteCache:
         try:
             from PIL import Image, ImageChops, ImageSequence
         except Exception:
-            return None
+            return self._load_single_image_fallback(*path_parts, size=size)
 
         full_path = get_asset_path(*path_parts)
         try:
             gif = Image.open(full_path)
         except Exception:
-            return None
+            return self._load_single_image_fallback(*path_parts, size=size)
 
         frames = []
         for frame in ImageSequence.Iterator(gif):
@@ -351,7 +351,21 @@ class SpriteCache:
 
             frames.append(surf)
 
-        return frames or None
+        return frames or self._load_single_image_fallback(*path_parts, size=size)
+
+    def _load_single_image_fallback(self, *path_parts, size=None):
+        """
+        Charge une seule frame a partir d'une image (y compris GIF statique/1ere frame)
+        pour eviter de tomber sur un rendu procedural quand l'animation complete
+        n'est pas disponible sur la machine.
+        """
+        try:
+            img = pygame.image.load(get_asset_path(*path_parts)).convert_alpha()
+            if size:
+                img = pygame.transform.scale(img, size)
+            return [img]
+        except Exception:
+            return None
 
     def load_strip_frames(self, *path_parts, size=None, alpha=True, trim=True, frame_width=None):
         """Charge une bande horizontale de frames de taille reguliere."""
