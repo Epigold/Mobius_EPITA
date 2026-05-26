@@ -418,10 +418,11 @@ ENEMY_CONFIG = {
         "sniper": {
             "health":  90, "speed": 3.5, "damage": 10, "size": 80,
             "sprite": ("enemies", "prehistoire", "sniper.png"), "sheet": True,
-            "gif_animations": {
-                "idle":   ("animations", "prehistoire", "sniper", "idle.gif"),
-                "walk":   ("animations", "prehistoire", "sniper", "walk.gif"),
-                "attack": ("animations", "prehistoire", "sniper", "attack_spear.gif"),
+            "strip_frame_width": 800,
+            "strip_animations": {
+                "idle":   ("animations", "prehistoire", "sniper", "idle_strip.png"),
+                "walk":   ("animations", "prehistoire", "sniper", "walk_strip.png"),
+                "attack": ("animations", "prehistoire", "sniper", "attack_spear_strip.png"),
             },
         },
         "boss":   {"health": 900, "speed": 4,   "damage": 22, "size": 170},
