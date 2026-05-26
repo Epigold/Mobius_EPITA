@@ -1,223 +1,155 @@
-# **🎮 Mobius_EPITA**
+# Mobius EPITA
 
-Jeu vidéo roguelike développé dans le cadre du **projet S2 – EPITA**.
+Mobius est un roguelike 2D realise dans le cadre du projet S2 a EPITA. Le jeu propose un mode solo et un mode multijoueur en ligne, avec une progression a travers plusieurs epoques et des armes differentes selon la salle en cours.
 
----
+## Apercu
 
-## **📋 Description**
+- 5 classes jouables : Tank, Berserker, Vampire, Ninja, Mage
+- 6 epoques : Prehistoire, Grece Antique, Edo, Ere Moderne, Guerre mondiale, Futur
+- Combats en temps reel avec armes de melee, distance et hybrides
+- Portails, coffres, vagues d'ennemis et boss reguliers
+- Multijoueur en ligne en host/client via UDP
 
-**Mobius** est un jeu roguelike en 2D dans lequel le joueur incarne un héros affrontant des vagues d’ennemis de plus en plus difficiles.
-Le jeu propose un **système de classes** avec des compétences uniques, une **progression par vagues** incluant des boss réguliers, ainsi qu’un **système d’inventaire** permettant de collecter des armes et des power-ups.
+## Lancer le jeu
 
----
+### Prerequis
 
-## **✨ Fonctionnalités**
+- Python 3.10 ou plus recent recommande
+- `pygame`
 
-* **Système de classes** : 5 classes jouables (Tank, Berserker, Vampire, Ninja, Mage)
-* **Combat dynamique** : attaques à distance et au corps à corps
-* **Vagues d’ennemis** : ennemis variés (Tank, Rusher, Sniper)
-* **Boss** : apparition d’un boss toutes les 3 vagues
-* **Système d’armes** : collecte et changement d’armes (caillou, os)
-* **Power-ups** : améliorations temporaires (dégâts, vitesse, santé, stamina)
-* **Économie** : collecte de pièces pour de futurs échanges avec des PNJ
-* **Interface utilisateur** : affichage de la vie, stamina et statistiques en temps réel
+### Installation rapide
 
----
-
-## **🎮 Classes disponibles**
-
-### **🛡️ Tank**
-
-* **Santé** : 150 PV
-* **Vitesse** : −30 %
-* **Compétence spéciale** : Bouclier (réduction des dégâts de 50 % pendant 5 secondes)
-
-### **⚔️ Berserker**
-
-* **Santé** : 80 PV
-  -- **Vitesse** : +30 %
-* **Compétence spéciale** : Rage (dégâts x2 pendant 5 secondes)
-
-### **🧛 Vampire**
-
-* **Stats** : normales
-* **Compétence spéciale** : Vol de vie (récupère 20 % des dégâts infligés pendant 10 secondes)
-
-### **👤 Ninja**
-
-* **Vitesse** : +15 %
-* **Dash** : cooldown réduit de moitié
-* **Compétence spéciale** : Téléportation vers la position de la souris
-
-### **🧙 Mage**
-
-* **Stamina** : 150
-* **Régénération** : +50 %
-* **Compétence spéciale** : Nova de projectiles (tir circulaire de 12 projectiles)
-
----
-
-## **🚀 Installation (Cross-platform)**
-
-### **📦 Prérequis**
-
-* **Git**
-* **Python 3.9 ou supérieur**
-* Un terminal (Bash, Zsh, PowerShell, Git Bash)
-
----
-
-## **🐧 Linux (Ubuntu / Debian / Fedora / Arch)**
-
-### **1️⃣ Installation des prérequis**
+Depuis la racine du depot :
 
 ```bash
-sudo apt update
-sudo apt install git
-```
-
-### **2️⃣ Cloner le projet**
-
-```bash
-git clone https://github.com/Epigold/Mobius_EPITA.git
-cd Mobius_EPITA
-```
-
-### **3️⃣ Lancer le script de setup**
-
-```bash
-chmod +x setup.sh
-./setup.sh
-```
-
-👉 Ce script :
-
-* installe **Python 3** et **pip** si nécessaire
-* crée un **environnement virtuel (`venv`)**
-* installe **Pygame** dans le venv
-* génère un script de lancement `run.sh`
-
-### **4️⃣ Lancer le jeu**
-
-```bash
-./run.sh
-```
-
----
-
-## **🍎 macOS**
-
-### **1️⃣ Installer Homebrew (si nécessaire)**
-
-```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-```
-
-### **2️⃣ Installer Git**
-
-```bash
-brew install git
-```
-
-### **3️⃣ Cloner le projet**
-
-```bash
-git clone https://github.com/Epigold/Mobius_EPITA.git
-cd Mobius_EPITA
-```
-
-### **4️⃣ Lancer le setup**
-
-```bash
-chmod +x setup.sh
-./setup.sh
-```
-
-### **5️⃣ Lancer le jeu**
-
-```bash
-./run.sh
-```
-
----
-
-## **🪟 Windows**
-
-⚠️ **Le script `setup.sh` n’est pas nativement compatible Windows**
-
-### **Solutions possibles**
-
-* Utiliser **WSL (Windows Subsystem for Linux)** ✅ *(recommandé)*
-* Utiliser **Git Bash**
-* Installer Python et Pygame manuellement
-
-### **Installation manuelle**
-
-```powershell
-winget install Python.Python.3
+python3 -m venv .venv
+source .venv/bin/activate
 pip install pygame
+python3 mobius/main.py
 ```
 
-Puis lancer le jeu :
+Sous Windows :
 
 ```powershell
-python prototype.py
+py -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install pygame
+py mobius/main.py
 ```
 
----
+## Mode de jeu
 
-## **🎯 Contrôles**
+Au lancement, le menu principal permet de :
 
-### **Menu principal**
+- Jouer en solo
+- Heberger une partie en ligne
+- Rejoindre une partie en ligne
+- Choisir une classe avant le debut de la partie
 
-* **1 – 5** : sélectionner une classe
-* **Clic gauche** : sélectionner une classe
+### Multijoueur
 
-### **En jeu**
+Le multijoueur fonctionne en host/client :
 
-* **Z/Q/S/D** ou **W/A/S/D** : déplacement
-* **Clic gauche** : attaquer
-* **Espace** : dash (consomme de la stamina)
-* **F** : compétence spéciale
-* **1 / 2** : changer d’arme
-* **E** : ouvrir un coffre
-* **Échap** : retour au menu
+- le host simule la partie
+- le client rejoint via l'adresse IP du host
+- le port UDP utilise par defaut est `55600`
 
-### **Game Over**
+Si vous jouez hors reseau local, il faut ouvrir ou rediriger le port `55600/UDP` sur la machine qui heberge.
 
-* **R** : rejouer avec la même classe
-* **M** : retour au menu principal
+## Controles
 
----
+### Menus
 
-## **📁 Structure du projet**
+- `Clic gauche` : selectionner
+- `1` a `5` : choisir une classe
+- `Echap` : retour ou fermeture selon l'ecran
 
-```
+### En partie
+
+- `ZQSD` ou `WASD` : se deplacer
+- `Clic gauche` : attaque principale
+- `Clic droit` : attaque alternative, uniquement pour les armes hybrides
+- `Espace` : dash
+- `F` : competence de classe
+- `E` : ouvrir un coffre ou activer un portail
+- `1` a `9` : changer d'arme
+- `Echap` : retour au menu
+
+### Apres une defaite
+
+- `R` : rejouer
+- `M` : revenir au menu principal
+
+## Classes
+
+- `Tank` : 150 PV, plus lent, competence defensive qui reduit les degats recus
+- `Berserker` : 80 PV, plus rapide, competence de rage qui augmente fortement les degats
+- `Vampire` : stats equilibrees, competence orientee survie
+- `Ninja` : plus mobile, dash plus frequent, teleportation au curseur
+- `Mage` : plus de stamina, meilleure regeneration, nova de projectiles
+
+## Tutoriel rapide
+
+### 1. Debut de partie
+
+- Choisissez une classe adaptee a votre style de jeu
+- Deplacez-vous constamment : rester immobile est souvent fatal
+- Surveillez la vie et surtout la stamina, car dash et attaques en dependent
+
+### 2. Pendant les vagues
+
+- Eliminez les ennemis a distance en priorite si la salle devient chargee
+- Utilisez le dash pour traverser une zone dangereuse ou sortir d'un encerclement
+- Gardez la competence `F` pour un moment utile, pas des que le cooldown est termine
+
+### 3. Coffres et nouvelles armes
+
+- Ouvrez les coffres avec `E`
+- Changez d'arme avec les touches numeriques
+- Testez les armes de chaque epoque : elles ne jouent pas toutes de la meme facon
+
+### 4. Portails et progression
+
+- Quand une vague est nettoyee, cherchez le portail
+- Activez-le avec `E` pour passer a la salle suivante
+- Chaque epoque augmente la pression et change votre arsenal disponible
+
+## Focus sur la Grece Antique
+
+La salle de Grece Antique donne acces a trois armes : l'arc, le crane et la lance.
+
+### Bien utiliser la lance
+
+La `lance` est une arme hybride. C'est le point important de cette periode :
+
+- `Clic gauche` : coup de melee
+- `Clic droit` : lancer de la lance a distance
+
+En pratique :
+
+- utilisez le `clic gauche` quand un ennemi est proche ou quand vous voulez un gros impact au corps a corps
+- utilisez le `clic droit` pour toucher avant le contact, finir un ennemi qui recule, ou ouvrir un passage
+- les deux modes consomment de la stamina, donc evitez de spammer lance + dash sans regarder votre reserve
+
+Conseil simple : en Grece Antique, la lance est souvent l'arme la plus polyvalente. Ouvrez un engagement au `clic droit`, puis finissez au `clic gauche` si l'ennemi arrive au contact.
+
+## Structure utile du projet
+
+```text
 Mobius_EPITA/
-├── prototype.py      # Code principal du jeu
-├── assets/           # Ressources graphiques
-├── setup.sh          # Script de setup (Linux / macOS)
-├── run.sh            # Script de lancement avec venv
-├── venv/             # Environnement virtuel Python
-└── README.md
+├── README.md
+└── mobius/
+    ├── main.py
+    ├── assets/
+    ├── sons/
+    ├── core/
+    └── epoques/
 ```
 
----
+## Etat du projet
 
-## **🧪 État du développement**
+Le projet est jouable, mais reste un prototype de jeu realise dans un cadre pedagogique. Il peut donc encore contenir des bugs, des equilibrages incomplets ou des elements de presentation temporaires.
 
-Ce projet est un **prototype** développé dans le cadre du **projet S2 de l’EPITA**.
-Il implémente les mécaniques principales du jeu mais peut contenir des bugs ou des fonctionnalités incomplètes.
+## Auteurs
 
----
-
-## **👥 Auteurs**
-
-Projet développé par **M3G_STUDIO**, étudiants à l’EPITA, dans le cadre du projet S2.
-
----
-
-## **📄 Licence**
-
-Projet développé dans un **cadre éducatif**.
-**Tous droits réservés.**
+Projet developpe par M3G_STUDIO dans le cadre du projet S2 d'EPITA.
