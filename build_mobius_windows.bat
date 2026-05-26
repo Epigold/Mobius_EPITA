@@ -10,6 +10,7 @@ set "DIST_DIR=%PROJECT_ROOT%\dist"
 set "BUILD_DIR=%PROJECT_ROOT%\build"
 set "OUTPUT_DIR=%PROJECT_ROOT%\build-output"
 set "EXECUTABLE_NAME=Mobius.exe"
+set "PYTHON_CMD="
 
 if not exist "%GAME_ROOT%\main.py" (
     echo Erreur: point d'entree introuvable: "%GAME_ROOT%\main.py"
@@ -17,13 +18,22 @@ if not exist "%GAME_ROOT%\main.py" (
 )
 
 where py >nul 2>nul
-if errorlevel 1 (
-    echo Erreur: le lanceur Python ^(py^) est requis pour compiler le jeu.
+if not errorlevel 1 set "PYTHON_CMD=py -3"
+if not defined PYTHON_CMD (
+    where python >nul 2>nul
+    if not errorlevel 1 set "PYTHON_CMD=python"
+)
+if not defined PYTHON_CMD (
+    where python3 >nul 2>nul
+    if not errorlevel 1 set "PYTHON_CMD=python3"
+)
+if not defined PYTHON_CMD (
+    echo Erreur: Python est requis pour compiler le jeu. Installez Python puis relancez le script.
     exit /b 1
 )
 
 echo ==^> Preparation de l'environnement de build
-py -3 -m venv "%BUILD_VENV%"
+%PYTHON_CMD% -m venv "%BUILD_VENV%"
 if errorlevel 1 exit /b 1
 
 call "%BUILD_VENV%\Scripts\activate.bat"
