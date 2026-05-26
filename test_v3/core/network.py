@@ -106,7 +106,8 @@ import time
 import math
 import pygame
 from .constants import EPOCHS, ENEMY_CONFIG, SKILLS, GOLD, RED, WHITE, SCREEN_WIDTH, SCREEN_HEIGHT
-from .graphics import draw_weapon_in_hand, tint_surface
+from .graphics import draw_weapon_in_hand, tint_surface, draw_enemy_health_bar
+from .mechanics import Chest
 
 # -- Constantes reseau ---------------------------------------------------------
 DEFAULT_PORT    = 55_600   # Port UDP par defaut (a ouvrir dans le pare-feu)
@@ -624,6 +625,9 @@ class ClientRenderer:
 
         self._enemy_anim_cache: dict[tuple, dict[str, list[pygame.Surface]]] = {}
         self._projectile_cache: dict[tuple, pygame.Surface] = {}
+        chest = Chest(0, 0)
+        self._chest_closed = chest.image
+        self._chest_opened = chest._build_opened()
 
         # Police pour les textes HUD client
         self._font_md = pygame.font.Font(None, 30)
@@ -652,6 +656,13 @@ class ClientRenderer:
             'inventory': list(pdata.get('i', ['rock'])),
             'is_downed': bool(pdata.get('dn', 0)),
             'revive_progress': int(pdata.get('rv', 0)),
+            'skill_cooldown': int(pdata.get('sc', 0)),
+            'skill_active': bool(pdata.get('sa', 0)),
+            'damage_boost': float(pdata.get('db', 1.0)),
+            'speed_boost': float(pdata.get('sb', 1.0)),
+            'boost_timer': int(pdata.get('bt', 0)),
+            'weapon_cooldown': int(pdata.get('wcd', 0)),
+            'weapon_cooldown_max': int(pdata.get('wcm', 1)),
         }
 
     def _normalize_enemies(self, state: dict) -> list[dict]:
@@ -757,12 +768,9 @@ class ClientRenderer:
         for chest in state.get('chests', []):
             cx, cy = chest['x'], chest['y']
             opened = bool(chest['opened'])
-            col = (80, 140, 80) if opened else (180, 120, 30)
-            pygame.draw.rect(surface, col, (cx-32, cy-26, 64, 52), border_radius=5)
-            pygame.draw.rect(surface, (255, 215, 0), (cx-32, cy-26, 64, 52), 2, border_radius=5)
-            if not opened:
-                # Serrure
-                pygame.draw.rect(surface, (255, 215, 0), (cx-6, cy-8, 12, 10), border_radius=2)
+            img = self._chest_opened if opened else self._chest_closed
+            rect = img.get_rect(center=(cx, cy))
+            surface.blit(img, rect)
 
         # -- 4. Projectiles joueurs --------------------------------------------
         for b in state.get('bullets', []):
@@ -822,7 +830,7 @@ class ClientRenderer:
 
         # -- 12. Rappel des touches P2 ------------------------------------------
         key_hint = self._font_sm.render(
-            "ZQSD:Move  -  Clic:Tir  -  ESPACE:Dash  -  F:Skill  -  E:Rea/Coffre  -  1/2:Arme",
+            "ZQSD:Move  -  Clic:Tir  -  ESPACE:Dash  -  F:Skill  -  E:Rea/Coffre  -  1..9:Arme",
             True, (150, 200, 255))
         surface.blit(key_hint, (10, self.h - 22))
 
@@ -871,19 +879,16 @@ class ClientRenderer:
         surface.blit(surf, (x - size//2, y - size//2))
 
         # Barre de vie au-dessus
-        hp_ratio = max(0, edata['health'] / max(1, edata['max_health']))
-        bar_w = size
-        bar_h = 6 if etype != 'boss' else 14
-        bar_x = x - bar_w//2
-        bar_y = y - size//2 - bar_h - 4
-
-        pygame.draw.rect(surface, (60, 20, 20), (bar_x, bar_y, bar_w, bar_h), border_radius=2)
-        if hp_ratio > 0:
-            hp_col = EPOCHS.get(epoch, {}).get('color', (200, 0, 0))
-            pygame.draw.rect(surface, hp_col,
-                             (bar_x, bar_y, int(bar_w * hp_ratio), bar_h), border_radius=2)
-        pygame.draw.rect(surface, (200, 200, 200),
-                         (bar_x, bar_y, bar_w, bar_h), 1, border_radius=2)
+        enemy_rect = pygame.Rect(x - size // 2, y - size // 2, size, size)
+        draw_enemy_health_bar(
+            surface,
+            enemy_rect,
+            edata['health'],
+            edata['max_health'],
+            EPOCHS.get(epoch, {}).get('color', RED),
+            is_boss=(etype == 'boss'),
+            screen_w=self.w,
+        )
 
     def _build_enemy_surf(self, etype: str, size: int, color: tuple) -> pygame.Surface:
         """Genere un sprite procedural d'ennemi (identique a base_room.py)."""
@@ -1010,11 +1015,15 @@ class ClientRenderer:
         fp.skill       = p2['skill']
         fp.inventory   = p2['inventory']
         fp.current_weapon = Weapon(p2['weapon']) if p2.get('weapon') else None
-        fp.skill_cooldown = 0
-        fp.skill_active   = False
+        fp.skill_cooldown = int(p2.get('skill_cooldown', 0))
+        fp.skill_active   = bool(p2.get('skill_active', False))
         fp.dash_cooldown  = 0
-        fp.damage_boost   = 1.0
-        fp.speed_boost    = 1.0
+        fp.damage_boost   = float(p2.get('damage_boost', 1.0))
+        fp.speed_boost    = float(p2.get('speed_boost', 1.0))
+        fp.boost_timer    = int(p2.get('boost_timer', 0))
+        if fp.current_weapon is not None:
+            fp.current_weapon.cooldown = int(p2.get('weapon_cooldown', 0))
+            fp.current_weapon.cooldown_max = max(1, int(p2.get('weapon_cooldown_max', fp.current_weapon.cooldown_max)))
         try:
             self.hud.draw(surface, fp, epoch, wave, wave_complete, boss_wave,
                           enemies_left=enemies_left)
@@ -1049,25 +1058,34 @@ class ClientRenderer:
                          (x, y + BAR_H + 4, int(BAR_W * sta_ratio), BAR_H - 4), border_radius=4)
 
     def _draw_p1_hud_small(self, surface, p1):
-        """Affiche les stats de P1 en petit en bas a droite (informations seulement)."""
-        font = self._font_sm
-        skill_name = SKILLS.get(p1['skill'], {}).get('name', 'P1') if p1['skill'] else 'P1'
+        """Affiche les stats de P1 avec le meme panneau que le HUD principal."""
+        from .mechanics import Weapon
+        class _FakePlayer:
+            pass
 
-        lines = [
-            (f"P1 - {skill_name}", (200, 180, 255)),
-            (f"HP: {int(p1['health'])}/{p1['max_health']}", (220, 100, 100)),
-            (f"Kills: {p1['kills']}  Pieces: {p1['coins']}", GOLD),
-        ]
-        panel_h = len(lines) * 20 + 12
-        panel_w = 220
+        fp = _FakePlayer()
+        fp.health = p1['health']
+        fp.max_health = p1['max_health']
+        fp.stamina = p1['stamina']
+        fp.max_stamina = p1['max_stamina']
+        fp.kills = p1['kills']
+        fp.coins = p1['coins']
+        fp.skill = p1['skill']
+        fp.inventory = p1['inventory']
+        fp.current_weapon = Weapon(p1['weapon']) if p1.get('weapon') else None
+        fp.skill_cooldown = int(p1.get('skill_cooldown', 0))
+        fp.skill_active = bool(p1.get('skill_active', False))
+        fp.damage_boost = float(p1.get('damage_boost', 1.0))
+        fp.speed_boost = float(p1.get('speed_boost', 1.0))
+        fp.boost_timer = int(p1.get('boost_timer', 0))
+        if fp.current_weapon is not None:
+            fp.current_weapon.cooldown = int(p1.get('weapon_cooldown', 0))
+            fp.current_weapon.cooldown_max = max(1, int(p1.get('weapon_cooldown_max', fp.current_weapon.cooldown_max)))
+
+        panel_w = self.hud.BAR_W + 80
+        panel_h = 190
         px = self.w - panel_w - 14
         py = self.h - panel_h - 14
-
-        bg = pygame.Surface((panel_w, panel_h), pygame.SRCALPHA)
-        bg.fill((10, 10, 30, 170))
-        pygame.draw.rect(bg, (80, 60, 140), bg.get_rect(), 1, border_radius=6)
-        surface.blit(bg, (px, py))
-
-        for i, (text, col) in enumerate(lines):
-            t = font.render(text, True, col)
-            surface.blit(t, (px + 8, py + 6 + i * 20))
+        self.hud.draw_player_panel(surface, fp, px, py)
+        tag = self._font_sm.render("P1", True, (220, 180, 255))
+        surface.blit(tag, (px + panel_w - tag.get_width() - 10, py + 8))

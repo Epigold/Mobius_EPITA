@@ -346,15 +346,11 @@ class Player(pygame.sprite.Sprite):
             self.skill_active=True; self.skill_duration=600; self.skill_cooldown=900
             if self._sound_callback: self._sound_callback("pouvoir_vampire")
         elif self.skill == "ninja":
-            # P1 : teleportation souris  -  P2 reseau : teleportation en avant
+            # P1 et P2 utilisent la meme cible de visee.
             if self._network_controlled:
-                dist = 180
-                dx = self.dir_x if self.dir_x != 0 else (1 if self.facing_right else -1)
-                dy = self.dir_y
-                mx = self.rect.centerx + dx * dist
-                my = self.rect.centery + dy * dist
+                mx, my = int(self.aim_x), int(self.aim_y)
             else:
-                mx,my = pygame.mouse.get_pos()
+                mx, my = pygame.mouse.get_pos()
             self.rect.center=(mx,my); self.hitbox.center=self.rect.center
             self.rect.clamp_ip(pygame.Rect(0,0,SCREEN_WIDTH,SCREEN_HEIGHT))
             self.hitbox.center=self.rect.center
@@ -966,7 +962,12 @@ class BaseRoom:
                     'ax':int(p.aim_x),'ay':int(p.aim_y),
                     'an':p._anim_state,'sk':p.skill,
                     'w':p.current_weapon.key,'i':list(p.inventory),
-                    'dn':1 if p.is_downed else 0,'rv':p.revive_progress}
+                    'dn':1 if p.is_downed else 0,'rv':p.revive_progress,
+                    'sc':int(p.skill_cooldown),'sa':1 if p.skill_active else 0,
+                    'db':round(p.damage_boost,2),'sb':round(p.speed_boost,2),
+                    'bt':int(p.boost_timer),
+                    'wcd':int(getattr(p.current_weapon, 'cooldown', 0)),
+                    'wcm':int(getattr(p.current_weapon, 'cooldown_max', 1))}
         def se(e):
             return {'i':id(e),'x':e.rect.centerx,'y':e.rect.centery,
                     'h':int(e.health),'m':int(e.max_health),
@@ -974,7 +975,7 @@ class BaseRoom:
                     'an':getattr(e, '_anim_state', 'idle'),
                     'af':int(getattr(e, '_anim_frame', 0)),
                     'fr':1 if getattr(e, 'facing_right', True) else 0}
-        return {
+        state = {
             'v':2,'f':self._network_frame,
             'ep':self.epoch_key,'wv':self.wave,
             'wc':1 if self.wave_complete else 0,'bw':1 if self.boss_wave else 0,
@@ -999,6 +1000,8 @@ class BaseRoom:
             'pu':[[p.rect.centerx,p.rect.centery,p.type] for p in self.powerups],
             'ch':[[c.rect.centerx,c.rect.centery,1 if c.opened else 0] for c in self.chests],
         }
+        self._sound_events = []
+        return state
 
     # -- Evenements (P1 local) -------------------------------------------------
     def handle_event(self, event):
@@ -1030,8 +1033,6 @@ class BaseRoom:
         self._network_game_over=False
         self._network_next_epoch=None
         self.objective_hint=""
-        self._sound_events = []
-
         p1_downed=self.player.is_downed
         p2_downed=(self.player2 is None) or self.player2.is_downed
         if (self.mode != "server" and p1_downed) or (self.mode == "server" and p1_downed and p2_downed):
@@ -1239,7 +1240,7 @@ class BaseRoom:
             surface.blit(bg_s,(hr.x-10,hr.y-5)); surface.blit(hint,hr)
         if len(self.player.inventory)>1:
             font=pygame.font.Font(None,22)
-            hint=font.render("1/2:Arme | F:Skill | ESC:Menu",True,LIGHT_GRAY)
+            hint=font.render("1..9:Arme | F:Skill | ESC:Menu",True,LIGHT_GRAY)
             surface.blit(hint,(10,SCREEN_HEIGHT-28))
         if self.mode=="server" and self.player2:
             if self._players_can_revive(self.player, self.player2):
@@ -1249,20 +1250,14 @@ class BaseRoom:
 
     def _draw_p2_hud(self, surface):
         """HUD de P2 reseau, affiche en bas a droite cote host."""
-        p2=self.player2; font=pygame.font.Font(None,22)
-        PANEL_W,PANEL_H=210,70; px=SCREEN_WIDTH-PANEL_W-14; py=SCREEN_HEIGHT-PANEL_H-14
-        bg=pygame.Surface((PANEL_W,PANEL_H),pygame.SRCALPHA); bg.fill((10,20,50,170))
-        pygame.draw.rect(bg,(80,140,255),bg.get_rect(),2,border_radius=8); surface.blit(bg,(px,py))
-        if p2.is_downed or p2.health<=0:
-            t=font.render("P2 - KO",True,RED); surface.blit(t,(px+8,py+PANEL_H//2-t.get_height()//2)); return
-        skill_name=SKILLS.get(p2.skill,{}).get("name","P2") if p2.skill else "P2"
-        surface.blit(font.render(f"P2 - {skill_name}",True,(150,200,255)),(px+6,py+6))
-        bw=PANEL_W-20; bx,by=px+10,py+28
-        pygame.draw.rect(surface,(60,20,20),(bx,by,bw,12),border_radius=3)
-        hp_r=max(0,p2.health/max(1,p2.max_health))
-        pygame.draw.rect(surface,(int(220*(1-hp_r)),int(220*hp_r),60),(bx,by,int(bw*hp_r),12),border_radius=3)
-        pygame.draw.rect(surface,WHITE,(bx,by,bw,12),1,border_radius=3)
-        surface.blit(font.render(f"HP {int(p2.health)}/{p2.max_health}",True,WHITE),(bx,by+14))
+        p2 = self.player2
+        panel_w, panel_h = self.hud.BAR_W + 80, 190
+        px = SCREEN_WIDTH - panel_w - 14
+        py = SCREEN_HEIGHT - panel_h - 14
+        self.hud.draw_player_panel(surface, p2, px, py)
+        font = pygame.font.Font(None, 22)
+        lbl = font.render("P2", True, (150, 200, 255))
+        surface.blit(lbl, (px + panel_w - lbl.get_width() - 10, py + 8))
 
     def _draw_player(self, surface, player, ox, oy, tint=None):
         pr = player.rect.move(ox, oy)

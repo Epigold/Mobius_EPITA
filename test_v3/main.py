@@ -1520,6 +1520,12 @@ class Game:
             "chest": chest_pressed,
         }
 
+        weapon_idx = -1
+        for i in range(9):
+            if keys[getattr(pygame, f"K_{i + 1}")]:
+                weapon_idx = i
+                break
+
         return {
             "dx":        dx,
             "dy":        dy,
@@ -1531,7 +1537,7 @@ class Game:
             "fire_tx":   mx,
             "fire_ty":   my,
             "chest":     chest_edge,
-            "weapon_idx": (1 if keys[pygame.K_2] else (0 if keys[pygame.K_1] else -1)),
+            "weapon_idx": weapon_idx,
         }
 
     # -- Gestionnaires d'evenements --------------------------------------------

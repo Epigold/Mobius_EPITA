@@ -578,6 +578,17 @@ class HUDRenderer:
         self._draw_wave_info(surface, epoch_key, wave, wave_complete, boss_wave, enemies_left)
         self._draw_epoch_badge(surface, epoch_key)
 
+    def draw_player_panel(self, surface, player, x, y):
+        """Dessine le panneau HUD principal d'un joueur a une position libre."""
+        panel = pygame.Surface((self.BAR_W + 80, 190), pygame.SRCALPHA)
+        self._draw_panel_bg(panel)
+        self._draw_hp_bar(panel, player)
+        self._draw_stamina_bar(panel, player)
+        self._draw_weapon_info(panel, player)
+        self._draw_stats(panel, player)
+        self._draw_skill_indicator(panel, player)
+        surface.blit(panel, (x, y))
+
     # -- Prive ----------------------------------------------------------------
 
     def _draw_panel_bg(self, surface):
