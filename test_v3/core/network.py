@@ -977,7 +977,11 @@ class ClientRenderer:
                             break
                         loaded[state] = seq
                     frames = loaded or None
-                if frames is None and cfg.get("strip_animations"):
+                if frames is None and gif_animations:
+                    col = EPOCHS.get(epoch, {}).get('enemy_tint', (180, 80, 80))
+                    base = self._build_enemy_surf(etype, size, col)
+                    frames = {'idle': [base], 'walk': [base], 'attack': [base]}
+                elif frames is None and cfg.get("strip_animations"):
                     frames = {
                         state: self._cache.load_strip_frames(
                             *anim_path,

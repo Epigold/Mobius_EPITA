@@ -493,11 +493,13 @@ class Enemy(pygame.sprite.Sprite):
     def _build_sprite(self, sprite_path, tint_color):
         try:
             cache = SpriteCache.get()
+            gif_required = False
             if self._uses_sheet:
                 gif_animations = self.cfg.get("gif_animations")
                 strip_animations = self.cfg.get("strip_animations")
                 manual_frames = self.cfg.get("sheet_frames")
                 if gif_animations:
+                    gif_required = True
                     loaded = {}
                     for state, anim_path in gif_animations.items():
                         frames = cache.load_gif_frames_optional(*anim_path, size=(self.size, self.size))
@@ -506,6 +508,8 @@ class Enemy(pygame.sprite.Sprite):
                             break
                         loaded[state] = frames
                     self._sheet_frames = loaded
+                    if not self._sheet_frames:
+                        raise RuntimeError("GIF animations required for this enemy but could not be loaded")
                 elif strip_animations:
                     self._sheet_frames = {
                         state: cache.load_strip_frames(
@@ -551,7 +555,7 @@ class Enemy(pygame.sprite.Sprite):
                     self.rect = self.image.get_rect()
                     return
 
-            if sprite_path:
+            if sprite_path and not gif_required:
                 img = cache.load(*sprite_path, size=(self.size, self.size))
                 self.base_image = img
                 self.image = img.copy()

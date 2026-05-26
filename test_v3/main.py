@@ -31,6 +31,13 @@ import threading
 import time
 from pathlib import Path
 
+MIXER_FREQUENCY = 44100
+MIXER_SIZE = -16
+MIXER_CHANNELS = 2
+MIXER_BUFFER = 2048
+
+pygame.mixer.pre_init(MIXER_FREQUENCY, MIXER_SIZE, MIXER_CHANNELS, MIXER_BUFFER)
+
 from core.constants import *
 from core.graphics  import SpriteCache, BackgroundRenderer, ScreenEffects
 from core.network   import GameServer, GameClient, ClientRenderer, DEFAULT_PORT, get_local_ip
@@ -77,7 +84,12 @@ class MusicManager:
         self.available = True
         try:
             if not pygame.mixer.get_init():
-                pygame.mixer.init()
+                pygame.mixer.init(
+                    frequency=MIXER_FREQUENCY,
+                    size=MIXER_SIZE,
+                    channels=MIXER_CHANNELS,
+                    buffer=MIXER_BUFFER,
+                )
         except Exception:
             self.available = False
 
@@ -161,6 +173,17 @@ class SoundManager:
         "pouvoir_vampire": SONS_PATH / "effets" / "pouvoir_vampire.mp3",
         "powerup": SONS_PATH / "effets" / "powerup.mp3",
     }
+    SOUND_CONFIG = {
+        "dash": {"volume": 0.42, "min_interval": 0.10, "max_instances": 1},
+        "degats_monstres": {"volume": 0.22, "min_interval": 0.08, "max_instances": 2},
+        "ouverture_coffre": {"volume": 0.35, "min_interval": 0.20, "max_instances": 1},
+        "powerup": {"volume": 0.30, "min_interval": 0.12, "max_instances": 1},
+        "pouvoir_mage": {"volume": 0.26, "min_interval": 0.15, "max_instances": 1},
+        "pouvoir_tank": {"volume": 0.28, "min_interval": 0.15, "max_instances": 1},
+        "pouvoir_vampire": {"volume": 0.28, "min_interval": 0.15, "max_instances": 1},
+        "berserker_power": {"volume": 0.30, "min_interval": 0.15, "max_instances": 1},
+        "ninja_tp": {"volume": 0.44, "min_interval": 0.12, "max_instances": 1},
+    }
 
     def __init__(self):
         self.available = True
@@ -169,12 +192,17 @@ class SoundManager:
         self._last_play_times = {}
         try:
             if not pygame.mixer.get_init():
-                pygame.mixer.init()
-            pygame.mixer.set_num_channels(max(16, pygame.mixer.get_num_channels()))
+                pygame.mixer.init(
+                    frequency=MIXER_FREQUENCY,
+                    size=MIXER_SIZE,
+                    channels=MIXER_CHANNELS,
+                    buffer=MIXER_BUFFER,
+                )
+            pygame.mixer.set_num_channels(max(24, pygame.mixer.get_num_channels()))
             for key, path in self.TRACKS.items():
                 if path.exists():
                     snd = pygame.mixer.Sound(str(path))
-                    snd.set_volume(self.volume)
+                    snd.set_volume(self.volume * self._relative_volume(key))
                     self._sounds[key] = snd
         except Exception:
             self.available = False
@@ -183,8 +211,8 @@ class SoundManager:
         self.volume = volume
         if not self.available:
             return
-        for snd in self._sounds.values():
-            snd.set_volume(volume)
+        for key, snd in self._sounds.items():
+            snd.set_volume(volume * self._relative_volume(key))
 
     def play(self, key, min_interval=0.0):
         if not self.available:
@@ -192,15 +220,23 @@ class SoundManager:
         snd = self._sounds.get(key)
         if snd is None:
             return
+        cfg = self.SOUND_CONFIG.get(key, {})
         now = time.monotonic()
         last = self._last_play_times.get(key, 0.0)
-        if min_interval > 0 and (now - last) < min_interval:
+        effective_min_interval = max(float(min_interval or 0.0), float(cfg.get("min_interval", 0.0)))
+        if effective_min_interval > 0 and (now - last) < effective_min_interval:
+            return
+        max_instances = int(cfg.get("max_instances", 0))
+        if max_instances > 0 and snd.get_num_channels() >= max_instances:
             return
         self._last_play_times[key] = now
         try:
             snd.play()
         except Exception:
             self.available = False
+
+    def _relative_volume(self, key):
+        return float(self.SOUND_CONFIG.get(key, {}).get("volume", 1.0))
 
 
 # ==============================================================================
