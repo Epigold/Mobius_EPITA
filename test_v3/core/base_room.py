@@ -718,12 +718,17 @@ class SniperEnemy(Enemy):
             self._set_anim_state("idle")
         self.shoot_cooldown-=1
         if self.shoot_cooldown<=0 and dist<=self.shoot_range:
-            bullet_sprite = ("weapons", "prehistoire", "lance.png") if self.epoch_key == "prehistoire" else None
-            bullet_size = (54, 20) if bullet_sprite else None
+            bullet_sprite = self.cfg.get("projectile_sprite")
+            bullet_size = self.cfg.get("projectile_size")
+            bullet_frame_width = self.cfg.get("projectile_frame_width")
+            if bullet_sprite is None and self.epoch_key == "prehistoire":
+                bullet_sprite = ("weapons", "prehistoire", "lance.png")
+                bullet_size = (54, 20)
             b=EnemyBullet(self.rect.centerx,self.rect.centery,
                            self.player.rect.centerx,self.player.rect.centery,
                            speed=9,damage=self.damage,epoch_key=self.epoch_key,
-                           sprite_path=bullet_sprite,size=bullet_size)
+                           sprite_path=bullet_sprite,size=bullet_size,
+                           frame_width=bullet_frame_width)
             self._eb_group.add(b); self._all_sprites.add(b); self.shoot_cooldown=self.shoot_delay
             self._set_anim_state("attack", hold_frames=16)
         self.handle_collision()

@@ -207,7 +207,7 @@ class MeleeAttack(pygame.sprite.Sprite):
 class EnemyBullet(pygame.sprite.Sprite):
     def __init__(self, x, y, target_x, target_y,
                  speed=10, damage=12, epoch_key="prehistoire",
-                 sprite_path=None, size=None):
+                 sprite_path=None, size=None, frame_width=None):
         super().__init__()
         self.damage   = damage
         self.epoch    = epoch_key
@@ -230,7 +230,16 @@ class EnemyBullet(pygame.sprite.Sprite):
         if sprite_path:
             try:
                 target_size = self.render_size if self.render_size else scale_tuple((42, 18))
-                self.original_image = SpriteCache.get().load(*sprite_path, size=target_size)
+                cache = SpriteCache.get()
+                if frame_width:
+                    frames = cache.load_strip_frames(
+                        *sprite_path,
+                        size=target_size,
+                        frame_width=frame_width,
+                    )
+                    self.original_image = frames[0] if frames else None
+                else:
+                    self.original_image = cache.load(*sprite_path, size=target_size)
             except Exception:
                 self.original_image = None
 

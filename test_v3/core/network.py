@@ -105,7 +105,7 @@ import threading
 import time
 import math
 import pygame
-from .constants import EPOCHS, ENEMY_CONFIG, SKILLS, GOLD, RED, WHITE, SCREEN_WIDTH, SCREEN_HEIGHT
+from .constants import EPOCHS, ENEMY_CONFIG, SKILLS, GOLD, RED, WHITE, SCREEN_WIDTH, SCREEN_HEIGHT, scale_int
 from .graphics import draw_weapon_in_hand, tint_surface, draw_enemy_health_bar
 from .mechanics import Chest
 
