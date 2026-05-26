@@ -1187,8 +1187,8 @@ class Game:
         Client : ne demarre PAS de simulation locale (rendu pur via client_renderer)
         """
         self.player_skill  = skill
-        self.current_epoch = "prehistoire"
-        self.current_room  = self.rooms["prehistoire"]
+        self.current_epoch = "grece"
+        self.current_room  = self.rooms["grece"]
         self._host_replay_vote = False
         self._client_replay_vote = False
         self._client_prev_buttons = {"dash": False, "skill": False, "fire": False, "alt_fire": False, "chest": False}

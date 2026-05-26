@@ -429,7 +429,7 @@ ENEMY_CONFIG = {
     },
     "grece": {
         "tank":   {
-            "health": 280, "speed": 3,   "damage": 18, "size": 100,
+            "health": 280, "speed": 3,   "damage": 18, "size": 128,
             "sheet": True, "strip_frame_width": 128,
             "strip_animations": {
                 "idle":   ("enemies", "grece_antique", "squelette", "Skeleton_Warrior", "Idle.png"),
@@ -438,7 +438,7 @@ ENEMY_CONFIG = {
             },
         },
         "rusher": {
-            "health":  70, "speed": 8.5, "damage": 10, "size": 62,
+            "health":  70, "speed": 8.5, "damage": 10, "size": 82,
             "sheet": True, "strip_frame_width": 128,
             "strip_animations": {
                 "idle":   ("enemies", "grece_antique", "squelette", "Skeleton_Warrior", "Idle.png"),
@@ -447,7 +447,7 @@ ENEMY_CONFIG = {
             },
         },
         "sniper": {
-            "health": 110, "speed": 4,   "damage": 13, "size": 80,
+            "health": 110, "speed": 4,   "damage": 13, "size": 104,
             "sheet": True, "strip_frame_width": 128,
             "strip_animations": {
                 "idle":   ("enemies", "grece_antique", "squelette", "Skeleton_Archer", "Idle.png"),
@@ -457,7 +457,7 @@ ENEMY_CONFIG = {
             "projectile_sprite": ("enemies", "grece_antique", "squelette", "Skeleton_Archer", "Arrow.png"),
             "projectile_size": (48, 18),
         },
-        "boss":   {"health":1200, "speed": 5,   "damage": 26, "size": 180},
+        "boss":   {"health":1200, "speed": 5,   "damage": 26, "size": 210},
     },
     "edo": {
         "tank":   {
