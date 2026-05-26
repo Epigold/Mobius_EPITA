@@ -39,6 +39,19 @@ except Exception:
     SCREEN_WIDTH  = 1920
     SCREEN_HEIGHT = 1080
 
+BASE_SCREEN_WIDTH = 1920
+BASE_SCREEN_HEIGHT = 1080
+WORLD_SCALE = max(1.0, min(SCREEN_WIDTH / BASE_SCREEN_WIDTH, SCREEN_HEIGHT / BASE_SCREEN_HEIGHT))
+
+def scale_value(value: float) -> float:
+    return value * WORLD_SCALE
+
+def scale_int(value: float, minimum: int = 1) -> int:
+    return max(minimum, int(round(value * WORLD_SCALE)))
+
+def scale_tuple(size: tuple[int, int]) -> tuple[int, int]:
+    return (scale_int(size[0]), scale_int(size[1]))
+
 # --------------------------------------------------
 #  COULEURS
 # --------------------------------------------------
@@ -81,17 +94,17 @@ GAME_OVER = 2
 # --------------------------------------------------
 #  PARAMETRES JOUEUR
 # --------------------------------------------------
-PLAYER_SIZE       = 80
-DASH_SPEED        = 20
+PLAYER_SIZE       = scale_int(80)
+DASH_SPEED        = scale_value(20)
 DASH_TIME         = 10
 DASH_COOLDOWN     = 30
 DASH_STAMINA_COST = 15
 
 # Tailles ennemis
-SIZE_TANK   = 100
-SIZE_RUSHER = 65
-SIZE_SNIPER = 85
-SIZE_BOSS   = 180
+SIZE_TANK   = scale_int(100)
+SIZE_RUSHER = scale_int(65)
+SIZE_SNIPER = scale_int(85)
+SIZE_BOSS   = scale_int(180)
 
 # --------------------------------------------------
 #  COMPETENCES (CLASSES)
@@ -158,7 +171,7 @@ EPOCHS = {
         "bg_tint":     (200, 180, 100),
         "difficulty":  1.3,
         "next":        "edo",
-        "weapons":     ["bow_shoot", "skull"],
+        "weapons":     ["bow_shoot", "skull", "greek_spear"],
         "enemy_tint":  (220, 200, 140),
         "description": "Soldats et mythes de l'Olympe",
     },
@@ -257,6 +270,21 @@ WEAPONS_DATA = {
         "cooldown":          20,
         "projectile_speed":  14,
         "size":              48,
+    },
+    "greek_spear": {
+        "name":                 "Lance",
+        "sprite":               ("weapons", "prehistoire", "lance.png"),
+        "fallback_color":       BROWN,
+        "type":                 "hybrid",
+        "range":                150,
+        "melee_damage":         95,
+        "melee_stamina_cost":   3,
+        "melee_cooldown":       18,
+        "ranged_damage":        70,
+        "ranged_stamina_cost":  3,
+        "ranged_cooldown":      24,
+        "projectile_speed":     21,
+        "size":                 92,
     },
     # -- Edo --------------------------------------
     "katana": {
@@ -399,15 +427,64 @@ ENEMY_CONFIG = {
         "boss":   {"health": 900, "speed": 4,   "damage": 22, "size": 170},
     },
     "grece": {
-        "tank":   {"health": 280, "speed": 3,   "damage": 18, "size": 100},
-        "rusher": {"health":  70, "speed": 8.5, "damage": 10, "size": 62},
-        "sniper": {"health": 110, "speed": 4,   "damage": 13, "size": 80},
+        "tank":   {
+            "health": 280, "speed": 3,   "damage": 18, "size": 100,
+            "sheet": True, "strip_frame_width": 128,
+            "strip_animations": {
+                "idle":   ("enemies", "grece_antique", "squelette", "Skeleton_Warrior", "Idle.png"),
+                "walk":   ("enemies", "grece_antique", "squelette", "Skeleton_Warrior", "Walk.png"),
+                "attack": ("enemies", "grece_antique", "squelette", "Skeleton_Warrior", "Attack_2.png"),
+            },
+        },
+        "rusher": {
+            "health":  70, "speed": 8.5, "damage": 10, "size": 62,
+            "sheet": True, "strip_frame_width": 128,
+            "strip_animations": {
+                "idle":   ("enemies", "grece_antique", "squelette", "Skeleton_Warrior", "Idle.png"),
+                "walk":   ("enemies", "grece_antique", "squelette", "Skeleton_Warrior", "Run.png"),
+                "attack": ("enemies", "grece_antique", "squelette", "Skeleton_Warrior", "Attack_1.png"),
+            },
+        },
+        "sniper": {
+            "health": 110, "speed": 4,   "damage": 13, "size": 80,
+            "sheet": True, "strip_frame_width": 128,
+            "strip_animations": {
+                "idle":   ("enemies", "grece_antique", "squelette", "Skeleton_Archer", "Idle.png"),
+                "walk":   ("enemies", "grece_antique", "squelette", "Skeleton_Archer", "Walk.png"),
+                "attack": ("enemies", "grece_antique", "squelette", "Skeleton_Archer", "Shot_1.png"),
+            },
+        },
         "boss":   {"health":1200, "speed": 5,   "damage": 26, "size": 180},
     },
     "edo": {
-        "tank":   {"health": 350, "speed": 3,   "damage": 22, "size": 100},
-        "rusher": {"health":  85, "speed": 10,  "damage": 12, "size": 62},
-        "sniper": {"health": 130, "speed": 4.5, "damage": 16, "size": 80},
+        "tank":   {
+            "health": 350, "speed": 3,   "damage": 22, "size": 115,
+            "sheet": True, "strip_frame_width": 128,
+            "strip_animations": {
+                "idle":   ("enemies", "edo", "Samurai", "Idle.png"),
+                "walk":   ("enemies", "edo", "Samurai", "Walk.png"),
+                "attack": ("enemies", "edo", "Samurai", "Attack_1.png"),
+            },
+        },
+        "rusher": {
+            "health":  85, "speed": 10,  "damage": 12, "size": 74,
+            "sheet": True, "strip_frame_width": 128,
+            "strip_animations": {
+                "idle":   ("enemies", "edo", "Samurai", "Idle.png"),
+                "walk":   ("enemies", "edo", "Samurai", "Run.png"),
+                "attack": ("enemies", "edo", "Samurai", "Attack_2.png"),
+            },
+        },
+        "sniper": {
+            "health": 130, "speed": 4.5, "damage": 16, "size": 92,
+            "sheet": True,
+            "strip_animations": {
+                "idle":   ("enemies", "edo", "Fire Wizard", "Idle.png"),
+                "walk":   ("enemies", "edo", "Fire Wizard", "Walk.png"),
+                "attack": ("enemies", "edo", "Fire Wizard", "Fireball.png"),
+            },
+            "strip_frame_width": 128,
+        },
         "boss":   {"health":1500, "speed": 6,   "damage": 30, "size": 185},
     },
     "moderne": {
@@ -417,9 +494,33 @@ ENEMY_CONFIG = {
         "boss":   {"health":1800, "speed": 6,   "damage": 35, "size": 185},
     },
     "contemporain": {
-        "tank":   {"health": 550, "speed": 4,   "damage": 30, "size": 105},
-        "rusher": {"health": 120, "speed": 12,  "damage": 18, "size": 65},
-        "sniper": {"health": 180, "speed": 5.5, "damage": 24, "size": 82},
+        "tank":   {
+            "health": 550, "speed": 4,   "damage": 30, "size": 105,
+            "sheet": True, "strip_frame_width": 128,
+            "strip_animations": {
+                "idle":   ("enemies", "WW2", "Soldier_2", "Idle.png"),
+                "walk":   ("enemies", "WW2", "Soldier_2", "Walk.png"),
+                "attack": ("enemies", "WW2", "Soldier_2", "Attack.png"),
+            },
+        },
+        "rusher": {
+            "health": 120, "speed": 12,  "damage": 18, "size": 65,
+            "sheet": True, "strip_frame_width": 128,
+            "strip_animations": {
+                "idle":   ("enemies", "WW2", "Soldier_1", "Idle.png"),
+                "walk":   ("enemies", "WW2", "Soldier_1", "Run.png"),
+                "attack": ("enemies", "WW2", "Soldier_1", "Attack.png"),
+            },
+        },
+        "sniper": {
+            "health": 180, "speed": 5.5, "damage": 24, "size": 82,
+            "sheet": True, "strip_frame_width": 128,
+            "strip_animations": {
+                "idle":   ("enemies", "WW2", "Soldier_3", "Idle.png"),
+                "walk":   ("enemies", "WW2", "Soldier_3", "Walk.png"),
+                "attack": ("enemies", "WW2", "Soldier_3", "Shot_1.png"),
+            },
+        },
         "boss":   {"health":2200, "speed": 7,   "damage": 40, "size": 190},
     },
     "futuristique": {

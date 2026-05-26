@@ -284,6 +284,67 @@ class SpriteCache:
         self._cache[key] = frames
         return frames
 
+    def load_strip_frames(self, *path_parts, size=None, alpha=True, trim=True, frame_width=None):
+        """Charge une bande horizontale de frames de taille reguliere."""
+        key = ("strip_frames", path_parts, size, alpha, trim, frame_width)
+        if key in self._cache:
+            return self._cache[key]
+
+        full_path = get_asset_path(*path_parts)
+        try:
+            if alpha:
+                sheet = pygame.image.load(full_path).convert_alpha()
+            else:
+                sheet = pygame.image.load(full_path).convert()
+        except Exception:
+            fallback = [self._make_fallback(size or (64, 64), path_parts)]
+            self._cache[key] = fallback
+            return fallback
+
+        sheet_w, sheet_h = sheet.get_size()
+        cell_w = frame_width or sheet_h
+        if cell_w <= 0:
+            cell_w = sheet_h or 1
+        frame_count = max(1, sheet_w // cell_w)
+        frames = []
+        for index in range(frame_count):
+            left = index * cell_w
+            width = min(cell_w, sheet_w - left)
+            cell_rect = pygame.Rect(left, 0, width, sheet_h)
+            cell = pygame.Surface(cell_rect.size, pygame.SRCALPHA)
+            cell.blit(sheet, (0, 0), cell_rect)
+
+            if trim:
+                bbox = cell.get_bounding_rect(min_alpha=1)
+                if bbox.width > 0 and bbox.height > 0:
+                    trimmed = pygame.Surface((bbox.width, bbox.height), pygame.SRCALPHA)
+                    trimmed.blit(cell, (0, 0), bbox)
+                else:
+                    trimmed = cell
+            else:
+                trimmed = cell
+
+            if size:
+                max_w = max(1, size[0] - 4)
+                max_h = max(1, size[1] - 4)
+                ratio = min(max_w / trimmed.get_width(), max_h / trimmed.get_height())
+                scaled_size = (
+                    max(1, int(trimmed.get_width() * ratio)),
+                    max(1, int(trimmed.get_height() * ratio)),
+                )
+                trimmed = pygame.transform.scale(trimmed, scaled_size)
+                frame = pygame.Surface(size, pygame.SRCALPHA)
+                frame.blit(
+                    trimmed,
+                    ((size[0] - trimmed.get_width()) // 2, size[1] - trimmed.get_height()),
+                )
+            else:
+                frame = trimmed
+            frames.append(frame)
+
+        self._cache[key] = frames
+        return frames
+
     def load_weapon(self, weapon_key, size=None):
         data = WEAPONS_DATA.get(weapon_key, {})
         sprite_path = data.get("sprite")
@@ -539,20 +600,19 @@ class BackgroundRenderer:
 class HUDRenderer:
     """Dessine toute l'interface (barres, stats, vague, armes, competences)."""
 
-    BAR_W      = 220
-    BAR_H_HP   = 22
-    BAR_H_STA  = 14
-    BAR_X      = 14
-    HP_Y       = 14
-    STA_Y      = 40
-    CORNER_R   = 6
-
     def __init__(self, screen_w, screen_h):
         self.w = screen_w
         self.h = screen_h
-        self.font_lg  = pygame.font.Font(None, 36)
-        self.font_md  = pygame.font.Font(None, 26)
-        self.font_sm  = pygame.font.Font(None, 20)
+        self.BAR_W = scale_int(220)
+        self.BAR_H_HP = scale_int(22)
+        self.BAR_H_STA = scale_int(14)
+        self.BAR_X = scale_int(14)
+        self.HP_Y = scale_int(14)
+        self.STA_Y = scale_int(40)
+        self.CORNER_R = scale_int(6)
+        self.font_lg  = pygame.font.Font(None, scale_int(36))
+        self.font_md  = pygame.font.Font(None, scale_int(26))
+        self.font_sm  = pygame.font.Font(None, scale_int(20))
         # Cache de surfaces fixes
         self._bar_bg_hp  = None
         self._bar_bg_sta = None
@@ -592,7 +652,7 @@ class HUDRenderer:
     # -- Prive ----------------------------------------------------------------
 
     def _draw_panel_bg(self, surface):
-        panel = pygame.Surface((self.BAR_W + 80, 190), pygame.SRCALPHA)
+        panel = pygame.Surface((self.BAR_W + scale_int(80), scale_int(190)), pygame.SRCALPHA)
         panel.fill((0, 0, 0, 110))
         pygame.draw.rect(panel, (255, 255, 255, 30),
                          panel.get_rect(), 1, border_radius=10)
@@ -637,10 +697,10 @@ class HUDRenderer:
         surface.blit(txt, (x + 4, y + h // 2 - txt.get_height() // 2))
 
     def _draw_weapon_info(self, surface, player):
-        y = 62
+        y = scale_int(62)
         wname = player.current_weapon.name if player.current_weapon else "-"
         wtype = player.current_weapon.type if player.current_weapon else ""
-        icon  = "RNG" if wtype == "ranged" else "MEL"
+        icon  = "RNG" if wtype == "ranged" else "MEL" if wtype == "melee" else "HYB"
 
         # Cooldown
         cd     = player.current_weapon.cooldown if player.current_weapon else 0
@@ -651,37 +711,37 @@ class HUDRenderer:
         surface.blit(txt, (self.BAR_X, y))
 
         # Mini barre de cooldown
-        pygame.draw.rect(surface, (60, 40, 0), (self.BAR_X, y + 16, self.BAR_W, 6),
+        pygame.draw.rect(surface, (60, 40, 0), (self.BAR_X, y + scale_int(16), self.BAR_W, scale_int(6)),
                          border_radius=3)
         if ratio > 0:
             col = GOLD if ratio >= 1.0 else ORANGE
             pygame.draw.rect(surface, col,
-                             (self.BAR_X, y + 16, int(ratio * self.BAR_W), 6),
+                             (self.BAR_X, y + scale_int(16), int(ratio * self.BAR_W), scale_int(6)),
                              border_radius=3)
 
         # Inventaire armes (slots)
         for i, wk in enumerate(player.inventory):
-            sx = self.BAR_X + i * 30
-            sy = y + 28
+            sx = self.BAR_X + i * scale_int(30)
+            sy = y + scale_int(28)
             slot_col = GOLD if wk == (player.current_weapon.key if player.current_weapon else "") else GRAY
-            pygame.draw.rect(surface, slot_col, (sx, sy, 24, 24), 2, border_radius=4)
+            pygame.draw.rect(surface, slot_col, (sx, sy, scale_int(24), scale_int(24)), 2, border_radius=4)
             num = self.font_sm.render(str(i + 1), True, slot_col)
-            surface.blit(num, (sx + 7, sy + 5))
+            surface.blit(num, (sx + scale_int(7), sy + scale_int(5)))
 
     def _draw_stats(self, surface, player):
-        y = 122
+        y = scale_int(122)
         kills_txt = self.font_sm.render(f"Kills {player.kills}", True, GOLD)
         surface.blit(kills_txt, (self.BAR_X, y))
 
         # Boosts actifs
-        boost_y = y + 18
+        boost_y = y + scale_int(18)
         if player.boost_timer > 0:
             if player.damage_boost > 1.0:
                 b = self.font_sm.render("DMG x1.5", True, (255, 120, 60))
                 surface.blit(b, (self.BAR_X, boost_y))
             if player.speed_boost > 1.0:
                 b = self.font_sm.render("SPD x1.5", True, CYAN)
-                surface.blit(b, (self.BAR_X + 80, boost_y))
+                surface.blit(b, (self.BAR_X + scale_int(80), boost_y))
 
         # Bouclier tank
         if getattr(player, "skill", None) == "tank" and player.skill_active:
@@ -689,7 +749,7 @@ class HUDRenderer:
             surface.blit(b, (self.BAR_X, boost_y))
 
     def _draw_skill_indicator(self, surface, player):
-        y = 150
+        y = scale_int(150)
         if not getattr(player, "skill", None):
             return
         if player.skill_cooldown > 0:
@@ -708,11 +768,11 @@ class HUDRenderer:
         else:
             txt = self.font_md.render(f"Vague {wave}   -   {enemies_left} ennemi(s)", True, WHITE)
         r = txt.get_rect()
-        r.topright = (self.w - 16, 12)
+        r.topright = (self.w - scale_int(16), scale_int(12))
 
-        bg = pygame.Surface((r.w + 20, r.h + 8), pygame.SRCALPHA)
+        bg = pygame.Surface((r.w + scale_int(20), r.h + scale_int(8)), pygame.SRCALPHA)
         bg.fill((0, 0, 0, 140))
-        surface.blit(bg, (r.x - 10, r.y - 4))
+        surface.blit(bg, (r.x - scale_int(10), r.y - scale_int(4)))
         surface.blit(txt, r)
 
     def _draw_epoch_badge(self, surface, epoch_key):
@@ -721,12 +781,12 @@ class HUDRenderer:
         color = epoch.get("color", WHITE)
         txt = self.font_sm.render(name, True, color)
         r = txt.get_rect()
-        r.topright = (self.w - 16, 42)
+        r.topright = (self.w - scale_int(16), scale_int(42))
 
-        bg = pygame.Surface((r.w + 16, r.h + 6), pygame.SRCALPHA)
+        bg = pygame.Surface((r.w + scale_int(16), r.h + scale_int(6)), pygame.SRCALPHA)
         bg.fill((*color[:3], 40))
         pygame.draw.rect(bg, (*color[:3], 180), bg.get_rect(), 1, border_radius=4)
-        surface.blit(bg, (r.x - 8, r.y - 3))
+        surface.blit(bg, (r.x - scale_int(8), r.y - scale_int(3)))
         surface.blit(txt, r)
 
 
@@ -1003,22 +1063,22 @@ def tint_surface(surface, color, alpha=180):
 def draw_enemy_health_bar(surface, enemy_rect, health, max_health,
                           epoch_color=RED, is_boss=False, screen_w=1920):
     if is_boss:
-        bar_w = 400
-        bar_h = 24
+        bar_w = scale_int(400)
+        bar_h = scale_int(24)
         bx = screen_w // 2 - bar_w // 2
-        by = 54
+        by = scale_int(54)
         pygame.draw.rect(surface, (60, 0, 0), (bx, by, bar_w, bar_h), border_radius=6)
         fill = max(0, int(health / max_health * bar_w))
         pygame.draw.rect(surface, PURPLE, (bx, by, fill, bar_h), border_radius=6)
         pygame.draw.rect(surface, WHITE, (bx, by, bar_w, bar_h), 2, border_radius=6)
-        font = pygame.font.Font(None, 28)
+        font = pygame.font.Font(None, scale_int(28))
         txt = font.render("BOSS", True, WHITE)
-        surface.blit(txt, (bx + bar_w // 2 - txt.get_width() // 2, by + 3))
+        surface.blit(txt, (bx + bar_w // 2 - txt.get_width() // 2, by + scale_int(3)))
     else:
-        bar_w = max(40, enemy_rect.width)
-        bar_h = 5
+        bar_w = max(scale_int(40), enemy_rect.width)
+        bar_h = scale_int(5)
         bx = enemy_rect.centerx - bar_w // 2
-        by = enemy_rect.top - 9
+        by = enemy_rect.top - scale_int(9)
         pygame.draw.rect(surface, (60, 0, 0), (bx, by, bar_w, bar_h), border_radius=3)
         fill = max(0, int(health / max_health * bar_w))
         ratio = health / max_health

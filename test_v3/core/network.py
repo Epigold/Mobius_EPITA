@@ -91,6 +91,7 @@ SCHEMA DES INPUTS (envoyes par le client chaque frame)
   "dash": bool,        # true si touche dash pressee ce frame
   "skill": bool,       # true si touche skill pressee ce frame
   "fire": bool,        # true si clic gauche presse ce frame
+  "alt_fire": bool,    # true si clic droit presse ce frame
   "fire_tx": int,      # Coordonnee X cible du tir (position souris)
   "fire_ty": int,      # Coordonnee Y cible du tir
   "chest": bool,       # true si touche coffre pressee ce frame
@@ -629,8 +630,8 @@ class ClientRenderer:
         self._chest_open_frames = list(chest._portal_open_frames)
 
         # Police pour les textes HUD client
-        self._font_md = pygame.font.Font(None, 30)
-        self._font_sm = pygame.font.Font(None, 22)
+        self._font_md = pygame.font.Font(None, scale_int(30))
+        self._font_sm = pygame.font.Font(None, scale_int(22))
 
     def _normalize_player(self, pdata: dict | None) -> dict | None:
         if not pdata:
@@ -755,7 +756,7 @@ class ClientRenderer:
             "stamina": (80,  120, 255),
         }
         POWERUP_LABELS = {"damage": "DMG", "speed": "SPD", "health": "HP", "stamina": "STA"}
-        font_pu = pygame.font.Font(None, 18)
+        font_pu = pygame.font.Font(None, scale_int(18))
         for pu in state.get('powerups', []):
             col = POWERUP_COLORS.get(pu['type'], (180, 180, 180))
             pygame.draw.circle(surface, col, (pu['x'], pu['y']), 17)
@@ -821,19 +822,19 @@ class ClientRenderer:
 
         # -- 11. Hint portail ---------------------------------------------------
         if state.get('show_chest_hint'):
-            font = pygame.font.Font(None, 32)
+            font = pygame.font.Font(None, scale_int(32))
             hint = font.render(state.get('objective_hint', "E : Activer le portail"), True, GOLD)
-            hr = hint.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 80))
-            bg_s = pygame.Surface((hr.w+20, hr.h+10), pygame.SRCALPHA)
+            hr = hint.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT - scale_int(80)))
+            bg_s = pygame.Surface((hr.w+scale_int(20), hr.h+scale_int(10)), pygame.SRCALPHA)
             bg_s.fill((0,0,0,160))
-            surface.blit(bg_s, (hr.x-10, hr.y-5))
+            surface.blit(bg_s, (hr.x-scale_int(10), hr.y-scale_int(5)))
             surface.blit(hint, hr)
 
         # -- 12. Rappel des touches P2 ------------------------------------------
         key_hint = self._font_sm.render(
-            "ZQSD:Move  -  Clic:Tir  -  ESPACE:Dash  -  F:Skill  -  E:Rea/Portail  -  1..9:Arme",
+            "ZQSD:Move  -  Clic G:Tir  -  Clic D:Alt  -  ESPACE:Dash  -  F:Skill  -  E:Rea/Portail  -  1..9:Arme",
             True, (150, 200, 255))
-        surface.blit(key_hint, (10, self.h - 22))
+        surface.blit(key_hint, (scale_int(10), self.h - scale_int(22)))
 
     def _draw_player(self, surface: pygame.Surface, pdata: dict, tint: tuple | None):
         """Dessine un joueur a partir de ses donnees serialisees."""
@@ -863,9 +864,9 @@ class ClientRenderer:
             draw_weapon_in_hand(surface, draw_rect, weapon, pdata.get('facing_right', True), aim_pos=(aim_x, aim_y))
 
     def _draw_revive_bar(self, surface: pygame.Surface, pdata: dict, color: tuple):
-        bw = 70
+        bw = scale_int(70)
         bx = pdata['x'] - bw // 2
-        by = pdata['y'] - 78
+        by = pdata['y'] - scale_int(78)
         progress = max(0.0, min(1.0, pdata.get('revive_progress', 0) / 90))
         pygame.draw.rect(surface, (30, 30, 30), (bx, by, bw, 7), border_radius=3)
         pygame.draw.rect(surface, color, (bx, by, int(bw * progress), 7), border_radius=3)

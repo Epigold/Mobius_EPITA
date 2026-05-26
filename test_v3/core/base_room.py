@@ -32,7 +32,7 @@ class Player(pygame.sprite.Sprite):
         "run":  ["char_run1_one_arm","char_run2_one_arm","char_run3_one_arm"],
         "dead": ["char_dead_one_arm"],
     }
-    SIZE = 80
+    SIZE = PLAYER_SIZE
     REVIVE_HEALTH_RATIO = 0.4
 
     def __init__(self, skill=None, start_pos=None):
@@ -43,12 +43,12 @@ class Player(pygame.sprite.Sprite):
         self.max_health = 100; self.health = 100
         self.max_stamina = 100; self.stamina = 100
         self.stamina_regen = 0.25
-        self.speed = 7
+        self.speed = scale_value(7)
         self.kills = 0
 
         # -- Buffs de classe ---------------------------------------------------
-        if skill == "tank":     self.max_health = self.health = 150; self.speed = 5
-        elif skill == "berserker": self.max_health = self.health = 80; self.speed = 9
+        if skill == "tank":     self.max_health = self.health = 150; self.speed = scale_value(5)
+        elif skill == "berserker": self.max_health = self.health = 80; self.speed = scale_value(9)
         elif skill == "mage":   self.max_stamina = self.stamina = 150; self.stamina_regen = 0.35
 
         # -- Dash --------------------------------------------------------------
@@ -96,6 +96,7 @@ class Player(pygame.sprite.Sprite):
         self._net_dash    = False   # Dash demande par le client ce frame
         self._net_skill   = False   # Skill demandee par le client ce frame
         self._net_fire    = False   # Tir demande par le client ce frame
+        self._net_alt_fire = False  # Tir secondaire demande par le client ce frame
         self._net_fire_tx = 0       # Coordonnee X cible du tir
         self._net_fire_ty = 0       # Coordonnee Y cible du tir
         self._net_interact = False
@@ -148,7 +149,7 @@ class Player(pygame.sprite.Sprite):
         self._handle_move_network(); self._update_anim()
         self.current_weapon.update_cooldown()
         # Reinitialiser les flags a usage unique
-        self._net_dash = self._net_skill = self._net_fire = False
+        self._net_dash = self._net_skill = self._net_fire = self._net_alt_fire = False
 
     def apply_network_inputs(self, inputs: dict, chests=None,
                               float_texts=None, particles=None):
@@ -157,7 +158,7 @@ class Player(pygame.sprite.Sprite):
         Pose les flags internes qui seront lus dans update_as_p2_server().
 
         inputs : dict {"dx":float, "dy":float, "dash":bool, "skill":bool,
-                        "fire":bool, "fire_tx":int, "fire_ty":int,
+                        "fire":bool, "alt_fire":bool, "fire_tx":int, "fire_ty":int,
                         "chest":bool, "weapon_idx":int}
         """
         if not inputs:
@@ -192,6 +193,10 @@ class Player(pygame.sprite.Sprite):
             self._net_fire = True
             self._net_fire_tx = int(inputs.get('fire_tx', self.rect.centerx + 100))
             self._net_fire_ty = int(inputs.get('fire_ty', self.rect.centery))
+        if inputs.get('alt_fire') and not self._net_alt_fire:
+            self._net_alt_fire = True
+            self._net_fire_tx = int(inputs.get('fire_tx', self.rect.centerx + 100))
+            self._net_fire_ty = int(inputs.get('fire_ty', self.rect.centery))
 
         # Changement d'arme (evenement discret)
         widx = int(inputs.get('weapon_idx', -1))
@@ -221,6 +226,7 @@ class Player(pygame.sprite.Sprite):
                 self.dash_cooldown = self._dash_cd_max; self.stamina -= DASH_STAMINA_COST
             if self._net_skill: self.use_skill()
             if self._net_fire:  self.attack(self._net_fire_tx, self._net_fire_ty)
+            if self._net_alt_fire: self.attack(self._net_fire_tx, self._net_fire_ty, alt_fire=True)
 
         self.rect.clamp_ip(pygame.Rect(0,0,SCREEN_WIDTH,SCREEN_HEIGHT))
         self.hitbox.center = self.rect.center
@@ -330,20 +336,24 @@ class Player(pygame.sprite.Sprite):
         self.hitbox.center = self.rect.center
 
     # -- Attaque ---------------------------------------------------------------
-    def attack(self, mx, my) -> bool:
+    def attack(self, mx, my, alt_fire=False) -> bool:
         """Lance une attaque (ranged->Bullet, melee->MeleeAttack). Retourne True si reussi."""
         if self.is_downed:
             return False
-        if not self.current_weapon.can_use(self.stamina): return False
-        self.stamina -= self.current_weapon.stamina_cost
-        self.current_weapon.use()
+        if alt_fire and self.current_weapon.type != "hybrid":
+            return False
+        if not self.current_weapon.can_use_mode(self.stamina, alt_fire): return False
+        mode_stats = self.current_weapon.get_mode_stats(alt_fire)
+        attack_profile = self.current_weapon.build_attack_profile(alt_fire)
+        self.stamina -= mode_stats["stamina_cost"]
+        self.current_weapon.use_mode(alt_fire)
         dmult = self.damage_boost
-        if self.current_weapon.type == "ranged":
-            b = Bullet(self.rect.centerx,self.rect.centery,mx,my,self.current_weapon,dmult,owner=self)
+        if mode_stats["type"] == "ranged":
+            b = Bullet(self.rect.centerx,self.rect.centery,mx,my,attack_profile,dmult,owner=self)
             if self._bullets is not None:     self._bullets.add(b)
             if self._all_sprites is not None: self._all_sprites.add(b)
         else:
-            m = MeleeAttack(self.rect.centerx,self.rect.centery,mx,my,self.current_weapon,dmult,owner=self)
+            m = MeleeAttack(self.rect.centerx,self.rect.centery,mx,my,attack_profile,dmult,owner=self)
             if self._melee_attacks is not None: self._melee_attacks.add(m)
             if self._all_sprites is not None:   self._all_sprites.add(m)
         return True
@@ -383,7 +393,7 @@ class Player(pygame.sprite.Sprite):
                 spell_weapon.projectile_speed = self.current_weapon.projectile_speed
             for deg in range(0,360,30):
                 rad=math.radians(deg)
-                tx=self.rect.centerx+math.cos(rad)*500; ty=self.rect.centery+math.sin(rad)*500
+                tx=self.rect.centerx+math.cos(rad)*scale_int(500); ty=self.rect.centery+math.sin(rad)*scale_int(500)
                 b=Bullet(self.rect.centerx,self.rect.centery,tx,ty,spell_weapon,1.5,owner=self)
                 self._bullets.add(b); self._all_sprites.add(b)
             self.skill_cooldown=1200
@@ -453,8 +463,8 @@ class Enemy(pygame.sprite.Sprite):
         sprite_path = sprite_path or cfg.get("sprite")
         self._uses_sheet = bool(cfg.get("sheet"))
         diff = EPOCHS.get(epoch_key,{}).get("difficulty",1.0)
-        self.speed=cfg["speed"]; self.max_health=int(cfg["health"]*diff)
-        self.health=self.max_health; self.damage=int(cfg["damage"]*diff); self.size=cfg["size"]
+        self.speed=scale_value(cfg["speed"]); self.max_health=int(cfg["health"]*diff)
+        self.health=self.max_health; self.damage=int(cfg["damage"]*diff); self.size=scale_int(cfg["size"])
         self.damage_cooldown=0; self.shoot_cooldown=0
         self._enemy_group = None
         self.facing_right = True
@@ -481,53 +491,70 @@ class Enemy(pygame.sprite.Sprite):
             p.rect.centerx-self.rect.centerx, p.rect.centery-self.rect.centery))
 
     def _build_sprite(self, sprite_path, tint_color):
-        if sprite_path:
-            try:
-                cache = SpriteCache.get()
-                if self._uses_sheet:
-                    gif_animations = self.cfg.get("gif_animations")
-                    manual_frames = self.cfg.get("sheet_frames")
-                    if gif_animations:
-                        self._sheet_frames = {
-                            state: cache.load_gif_frames(*anim_path, size=(self.size, self.size))
-                            for state, anim_path in gif_animations.items()
-                        }
-                    elif manual_frames:
-                        trim = bool(self.cfg.get("sheet_trim", True))
-                        common_scale = bool(self.cfg.get("sheet_common_scale", False))
-                        bbox_anchor = bool(self.cfg.get("sheet_bbox_anchor", False))
-                        self._sheet_frames = {
-                            state: cache.load_frames(
-                                *sprite_path,
-                                frame_rects=rects,
-                                size=(self.size, self.size),
-                                trim=trim,
-                                common_scale=common_scale,
-                                bbox_anchor=bbox_anchor,
-                            )
-                            for state, rects in manual_frames.items()
-                        }
-                    else:
-                        cols = int(self.cfg.get("sheet_cols", 3))
-                        rows_count = int(self.cfg.get("sheet_rows", 3))
-                        rows = cache.load_sheet(
-                            *sprite_path,
-                            cols=cols,
-                            rows=rows_count,
+        try:
+            cache = SpriteCache.get()
+            if self._uses_sheet:
+                gif_animations = self.cfg.get("gif_animations")
+                strip_animations = self.cfg.get("strip_animations")
+                manual_frames = self.cfg.get("sheet_frames")
+                if gif_animations:
+                    self._sheet_frames = {
+                        state: cache.load_gif_frames(*anim_path, size=(self.size, self.size))
+                        for state, anim_path in gif_animations.items()
+                    }
+                elif strip_animations:
+                    self._sheet_frames = {
+                        state: cache.load_strip_frames(
+                            *anim_path,
                             size=(self.size, self.size),
+                            frame_width=self.cfg.get("strip_frame_width"),
                         )
-                        self._sheet_frames = {
-                            "idle": rows[0],
-                            "walk": rows[1],
-                            "attack": rows[2],
-                        }
+                        for state, anim_path in strip_animations.items()
+                    }
+                elif manual_frames and sprite_path:
+                    trim = bool(self.cfg.get("sheet_trim", True))
+                    common_scale = bool(self.cfg.get("sheet_common_scale", False))
+                    bbox_anchor = bool(self.cfg.get("sheet_bbox_anchor", False))
+                    self._sheet_frames = {
+                        state: cache.load_frames(
+                            *sprite_path,
+                            frame_rects=rects,
+                            size=(self.size, self.size),
+                            trim=trim,
+                            common_scale=common_scale,
+                            bbox_anchor=bbox_anchor,
+                        )
+                        for state, rects in manual_frames.items()
+                    }
+                elif sprite_path:
+                    cols = int(self.cfg.get("sheet_cols", 3))
+                    rows_count = int(self.cfg.get("sheet_rows", 3))
+                    rows = cache.load_sheet(
+                        *sprite_path,
+                        cols=cols,
+                        rows=rows_count,
+                        size=(self.size, self.size),
+                    )
+                    self._sheet_frames = {
+                        "idle": rows[0],
+                        "walk": rows[1],
+                        "attack": rows[2],
+                    }
+
+                if self._sheet_frames:
                     self.base_image = self._sheet_frames["idle"][0]
                     self.image = self.base_image.copy()
                     self.rect = self.image.get_rect()
                     return
+
+            if sprite_path:
                 img = cache.load(*sprite_path, size=(self.size, self.size))
-                self.base_image=img; self.image=img.copy(); self.rect=self.image.get_rect(); return
-            except Exception: pass
+                self.base_image = img
+                self.image = img.copy()
+                self.rect = self.image.get_rect()
+                return
+        except Exception:
+            pass
         self.base_image=self._draw_procedural(tint_color)
         self.image=self.base_image.copy(); self.rect=self.image.get_rect()
 
@@ -677,14 +704,14 @@ class SniperEnemy(Enemy):
     def __init__(self,player,epoch_key,enemy_bullets_group,all_sprites_group):
         super().__init__(player,epoch_key,"sniper")
         self._eb_group=enemy_bullets_group; self._all_sprites=all_sprites_group
-        self.shoot_delay=90; self.shoot_range=500
+        self.shoot_delay=90; self.shoot_range=scale_int(500)
     def update(self,*args):
         self.player=self._get_nearest_player()
         dx=self.player.rect.x-self.rect.x; dy=self.player.rect.y-self.rect.y
         dist=math.hypot(dx,dy) or 1
         self.facing_right = dx >= 0
         if dist>self.shoot_range: self.basic_movement()
-        elif dist<self.shoot_range-60:
+        elif dist<self.shoot_range-scale_int(60):
             self.rect.x-=(dx/dist)*self.speed; self.rect.y-=(dy/dist)*self.speed
             self._set_anim_state("walk")
         else:
@@ -714,7 +741,7 @@ class BossEnemy(Enemy):
     def update(self,*args):
         self.player=self._get_nearest_player()
         if self.health<self.max_health*0.5 and self.phase==1:
-            self.phase=2; self.speed=int(self.speed*1.4)
+            self.phase=2; self.speed=self.speed*1.4
         self.attack_cd-=1
         if not self.charging:
             self.basic_movement()
@@ -727,7 +754,7 @@ class BossEnemy(Enemy):
                     count=8+self.wave*2
                     for i in range(count):
                         rad=math.radians(i*360//count)
-                        tx=self.rect.centerx+math.cos(rad)*600; ty=self.rect.centery+math.sin(rad)*600
+                        tx=self.rect.centerx+math.cos(rad)*scale_int(600); ty=self.rect.centery+math.sin(rad)*scale_int(600)
                         b=EnemyBullet(self.rect.centerx,self.rect.centery,tx,ty,
                                        speed=10,damage=self.damage,epoch_key=self.epoch_key)
                         self._eb_group.add(b); self._all_sprites.add(b)
@@ -735,7 +762,8 @@ class BossEnemy(Enemy):
         else:
             tx,ty=self.target_pos; dx=tx-self.rect.centerx; dy=ty-self.rect.centery
             dist=math.hypot(dx,dy) or 1
-            self.rect.x+=(dx/dist)*16; self.rect.y+=(dy/dist)*16
+            charge_speed = scale_value(16)
+            self.rect.x+=(dx/dist)*charge_speed; self.rect.y+=(dy/dist)*charge_speed
             self.charge_time-=1
             if self.charge_time<=0: self.charging=False
         self.handle_collision()
@@ -760,7 +788,7 @@ class BaseRoom:
       state = room.serialize_state()        # Apres update(), a envoyer au client
     """
     WAVES_BEFORE_NEXT_EPOCH = 3
-    REVIVE_DISTANCE = 110
+    REVIVE_DISTANCE = scale_int(110)
     REVIVE_TIME = 90
 
     def __init__(self, game, epoch_key):
@@ -1042,10 +1070,11 @@ class BaseRoom:
             if event.key==pygame.K_e:
                 if not (self.player2 and self._players_can_revive(self.player, self.player2)):
                     self._try_open_chest_for_player(self.player)
-        elif event.type==pygame.MOUSEBUTTONDOWN and event.button==1:
+        elif event.type==pygame.MOUSEBUTTONDOWN and event.button in (1, 3):
             mx,my=pygame.mouse.get_pos()
-            if self.player.attack(mx,my):
-                wtype=self.player.current_weapon.type
+            alt_fire = event.button == 3
+            if self.player.attack(mx,my,alt_fire=alt_fire):
+                wtype = self.player.current_weapon.get_attack_mode(alt_fire)
                 if wtype=="melee": self.particles.emit_hit_spark(mx,my,YELLOW,5)
                 elif self.player.current_weapon.key in ("magic_orb",): self.particles.emit_magic(mx,my,TEAL,6)
         return None

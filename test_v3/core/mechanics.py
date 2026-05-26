@@ -4,6 +4,7 @@
 import pygame
 import math
 import random
+from types import SimpleNamespace
 from .constants import *
 from .graphics   import SpriteCache, draw_weapon_in_hand
 
@@ -25,12 +26,24 @@ class Weapon:
         self.stamina_cost = data.get("stamina_cost",   1)
         self.cooldown_max = data.get("cooldown",       20)
         self.cooldown     = 0
-        self.size         = data.get("size",           48)
+        self.size         = scale_int(data.get("size", 48))
 
-        if self.type == "ranged":
-            self.projectile_speed = data.get("projectile_speed", 18)
+        if self.type == "hybrid":
+            self.melee_damage = data.get("melee_damage", self.damage)
+            self.melee_stamina_cost = data.get("melee_stamina_cost", self.stamina_cost)
+            self.melee_cooldown_max = data.get("melee_cooldown", self.cooldown_max)
+            self.melee_range = scale_int(data.get("range", 110))
+            self.ranged_damage = data.get("ranged_damage", self.damage)
+            self.ranged_stamina_cost = data.get("ranged_stamina_cost", self.stamina_cost)
+            self.ranged_cooldown_max = data.get("ranged_cooldown", self.cooldown_max)
+            self.projectile_speed = scale_value(data.get("projectile_speed", 18))
+            self.damage = self.melee_damage
+            self.stamina_cost = self.melee_stamina_cost
+            self.cooldown_max = self.melee_cooldown_max
+        elif self.type == "ranged":
+            self.projectile_speed = scale_value(data.get("projectile_speed", 18))
         else:
-            self.melee_range = data.get("range", 110)
+            self.melee_range = scale_int(data.get("range", 110))
 
         # Chargement sprite
         cache = SpriteCache.get()
@@ -48,6 +61,63 @@ class Weapon:
     def use(self):
         self.cooldown = self.cooldown_max
 
+    def get_attack_mode(self, alt_fire: bool = False) -> str:
+        if self.type == "hybrid":
+            return "ranged" if alt_fire else "melee"
+        return self.type
+
+    def get_mode_stats(self, alt_fire: bool = False) -> dict:
+        mode = self.get_attack_mode(alt_fire)
+        if self.type == "hybrid":
+            if mode == "ranged":
+                return {
+                    "type": "ranged",
+                    "damage": self.ranged_damage,
+                    "stamina_cost": self.ranged_stamina_cost,
+                    "cooldown": self.ranged_cooldown_max,
+                    "projectile_speed": self.projectile_speed,
+                }
+            return {
+                "type": "melee",
+                "damage": self.melee_damage,
+                "stamina_cost": self.melee_stamina_cost,
+                "cooldown": self.melee_cooldown_max,
+                "melee_range": self.melee_range,
+            }
+        data = {
+            "type": mode,
+            "damage": self.damage,
+            "stamina_cost": self.stamina_cost,
+            "cooldown": self.cooldown_max,
+        }
+        if mode == "ranged":
+            data["projectile_speed"] = self.projectile_speed
+        else:
+            data["melee_range"] = self.melee_range
+        return data
+
+    def can_use_mode(self, stamina: float, alt_fire: bool = False) -> bool:
+        return self.cooldown == 0 and stamina >= self.get_mode_stats(alt_fire)["stamina_cost"]
+
+    def use_mode(self, alt_fire: bool = False):
+        self.cooldown_max = self.get_mode_stats(alt_fire)["cooldown"]
+        self.cooldown = self.cooldown_max
+
+    def build_attack_profile(self, alt_fire: bool = False):
+        mode_stats = self.get_mode_stats(alt_fire)
+        profile = {
+            "key": self.key,
+            "size": self.size,
+            "image": self.image,
+            "original_image": self.original_image,
+            "damage": mode_stats["damage"],
+        }
+        if mode_stats["type"] == "ranged":
+            profile["projectile_speed"] = mode_stats["projectile_speed"]
+        else:
+            profile["melee_range"] = mode_stats["melee_range"]
+        return SimpleNamespace(**profile)
+
 
 # ==============================================================================
 #  PROJECTILE JOUEUR
@@ -64,7 +134,7 @@ class Bullet(pygame.sprite.Sprite):
 
         # Sprite : copie du sprite de l'arme (redimensionne)
         base = weapon.image
-        proj_size = max(20, weapon.size // 2)
+        proj_size = max(scale_int(20), weapon.size // 2)
         self.original_image = pygame.transform.scale(base, (proj_size, proj_size))
         self.image  = self.original_image.copy()
         self.rect   = self.image.get_rect(center=(x, y))
@@ -142,24 +212,30 @@ class EnemyBullet(pygame.sprite.Sprite):
         self.damage   = damage
         self.epoch    = epoch_key
         self.sprite_path = sprite_path
-        self.render_size = size
+        if isinstance(size, tuple):
+            self.render_size = scale_tuple(size)
+        elif size is not None:
+            self.render_size = scale_int(size)
+        else:
+            self.render_size = None
 
         dx = target_x - x
         dy = target_y - y
         dist = math.hypot(dx, dy) or 1
-        self.vel_x = (dx / dist) * speed
-        self.vel_y = (dy / dist) * speed
+        scaled_speed = scale_value(speed)
+        self.vel_x = (dx / dist) * scaled_speed
+        self.vel_y = (dy / dist) * scaled_speed
 
         self.original_image = None
         if sprite_path:
             try:
-                target_size = size or (42, 18)
+                target_size = self.render_size if self.render_size else scale_tuple((42, 18))
                 self.original_image = SpriteCache.get().load(*sprite_path, size=target_size)
             except Exception:
                 self.original_image = None
 
         if self.original_image is None:
-            bullet_size = size or 14
+            bullet_size = self.render_size if self.render_size is not None else scale_int(14)
             if isinstance(bullet_size, tuple):
                 bullet_size = max(bullet_size)
             self.original_image = pygame.Surface((bullet_size, bullet_size), pygame.SRCALPHA)
@@ -196,7 +272,7 @@ _POWERUP_STYLES = {
 }
 
 class PowerUp(pygame.sprite.Sprite):
-    SIZE = 34
+    SIZE = scale_int(34)
 
     def __init__(self, x, y, powerup_type):
         super().__init__()
@@ -220,7 +296,7 @@ class PowerUp(pygame.sprite.Sprite):
         pygame.draw.circle(surf, (*style["color"], 200), (s // 2, s // 2), s // 2)
         pygame.draw.circle(surf, WHITE, (s // 2, s // 2), s // 2, 2)
         # Lettre
-        font = pygame.font.Font(None, 18)
+        font = pygame.font.Font(None, scale_int(18))
         txt  = font.render(style["label"], True, WHITE)
         surf.blit(txt, (s // 2 - txt.get_width() // 2, s // 2 - txt.get_height() // 2))
         return surf
@@ -243,7 +319,7 @@ class PowerUp(pygame.sprite.Sprite):
 # ==============================================================================
 
 class Chest(pygame.sprite.Sprite):
-    W, H = 160, 160
+    W, H = scale_int(160), scale_int(160)
     _portal_frames = None
     _portal_open_frames = None
 

@@ -13,7 +13,7 @@ FLUX DU JEU (etats)
                                `-- Rejoindre -> IP_INPUT       -> CONNECTING       -> PLAYING (client)
 
 CONTROLES
-  P1 (host) : ZQSD  -  Clic gauche  -  ESPACE (dash)  -  F (skill)  -  E (portail)  -  1/2 (arme)
+  P1 (host) : ZQSD  -  Clic gauche/droit  -  ESPACE (dash)  -  F (skill)  -  E (portail)  -  1..9 (arme)
   P2 (client) : MEMES touches que P1 (chacun joue sur son propre PC)
 
 RESEAU (voir core/network.py pour les details)
@@ -306,24 +306,24 @@ def load_optional_scaled_image(path_parts, size=None, alpha=True):
 
 class MainMenuRenderer:
     """Ecran titre avec logo MOBIUS anime + boutons Nouvelle Partie / Quitter."""
-    BTN_W, BTN_H = 300, 60
+    BTN_W, BTN_H = scale_int(300), scale_int(60)
 
     def __init__(self, w, h, bg):
         self.w, self.h   = w, h
         self.bg          = bg
-        self.font_xl     = pygame.font.Font(None, 90)
-        self.font_lg     = pygame.font.Font(None, 50)
-        self.font_md     = pygame.font.Font(None, 34)
-        self.font_sm     = pygame.font.Font(None, 22)
+        self.font_xl     = pygame.font.Font(None, scale_int(90))
+        self.font_lg     = pygame.font.Font(None, scale_int(50))
+        self.font_md     = pygame.font.Font(None, scale_int(34))
+        self.font_sm     = pygame.font.Font(None, scale_int(22))
         self._timer      = 0
         self._particles  = make_particles(50, w, h)
         self.logo        = load_optional_scaled_image(
-            ("ui", "logo", "mobius_violet.png"), size=(360, 240)
+            ("ui", "logo", "mobius_violet.png"), size=scale_tuple((360, 240))
         )
 
     def _btn(self, i):
         return pygame.Rect(self.w//2 - self.BTN_W//2,
-                           self.h//2 + 60 + i*(self.BTN_H+22), self.BTN_W, self.BTN_H)
+                           self.h//2 + scale_int(60) + i*(self.BTN_H+scale_int(22)), self.BTN_W, self.BTN_H)
 
     def get_play_rect(self): return self._btn(0)
     def get_quit_rect(self): return self._btn(1)
@@ -335,15 +335,15 @@ class MainMenuRenderer:
         draw_particles(surface, self._particles, self.w, self.h)
 
         # Logo anime
-        ty = int(self.h//2 - 220 + math.sin(self._timer*0.02)*5)
+        ty = int(self.h//2 - scale_int(220) + math.sin(self._timer*0.02)*scale_int(5))
         sub = self.font_lg.render("R O G U E L I K E", True, (160,200,255))
         if self.logo:
             lx = self.w//2 - self.logo.get_width()//2
             shadow = self.logo.copy()
             shadow.fill((0, 0, 0, 60), special_flags=pygame.BLEND_RGBA_MULT)
-            surface.blit(shadow, (lx + 12, ty + 18))
+            surface.blit(shadow, (lx + scale_int(12), ty + scale_int(18)))
             surface.blit(self.logo, (lx, ty))
-            sub_y = ty + self.logo.get_height() - 8
+            sub_y = ty + self.logo.get_height() - scale_int(8)
         else:
             title = self.font_xl.render("MOBIUS", True, WHITE)
             ref   = pygame.transform.flip(title, False, True)
@@ -351,7 +351,7 @@ class MainMenuRenderer:
             ref_s.blit(ref, (0,0)); ref_s.set_alpha(35)
             surface.blit(ref_s, (self.w//2 - title.get_width()//2, ty+title.get_height()))
             surface.blit(title,  (self.w//2 - title.get_width()//2, ty))
-            sub_y = ty + title.get_height() + 8
+            sub_y = ty + title.get_height() + scale_int(8)
         surface.blit(sub, (self.w//2 - sub.get_width()//2, sub_y))
 
         draw_button(surface, self.get_play_rect(), "Jouer",
@@ -360,11 +360,11 @@ class MainMenuRenderer:
                     self.get_quit_rect().collidepoint(mouse), self.font_md)
 
         hint = self.font_sm.render("Entree = Jouer   -   ESC = Quitter", True, (90,110,150))
-        surface.blit(hint, (self.w//2-hint.get_width()//2, self.h-42))
+        surface.blit(hint, (self.w//2-hint.get_width()//2, self.h-scale_int(42)))
         ei = self.font_sm.render(
-            "6 EPOQUES   -   Prehistoire -> Grece -> Edo -> Moderne -> WW2 -> Futur",
+            "6 EPOQUES   -   Prehistoire -> Grece Antique -> Edo -> Moderne -> WW2 -> Futur",
             True, (80,100,140))
-        surface.blit(ei, (self.w//2-ei.get_width()//2, self.h-64))
+        surface.blit(ei, (self.w//2-ei.get_width()//2, self.h-scale_int(64)))
 
 
 # ==============================================================================
@@ -377,16 +377,16 @@ class ModeSelectRenderer:
       - SOLO         -> mode classique un joueur
       - EN LIGNE     -> multijoueur via reseau (Host ou Join)
     """
-    CARD_W, CARD_H = 320, 360
-    SPACING        = 80
+    CARD_W, CARD_H = scale_int(320), scale_int(360)
+    SPACING        = scale_int(80)
 
     def __init__(self, w, h, bg):
         self.w, self.h  = w, h
         self.bg         = bg
-        self.font_xl    = pygame.font.Font(None, 80)
-        self.font_lg    = pygame.font.Font(None, 48)
-        self.font_md    = pygame.font.Font(None, 30)
-        self.font_sm    = pygame.font.Font(None, 22)
+        self.font_xl    = pygame.font.Font(None, scale_int(80))
+        self.font_lg    = pygame.font.Font(None, scale_int(48))
+        self.font_md    = pygame.font.Font(None, scale_int(30))
+        self.font_sm    = pygame.font.Font(None, scale_int(22))
         self._timer     = 0
         self._particles = make_particles(40, w, h)
         self._c_solo    = self._build_card_solo()
@@ -409,66 +409,67 @@ class ModeSelectRenderer:
         surf = self._card_base((60,20,120), (20,10,60), (120,80,255))
         cx   = self.CARD_W // 2
         # Icone joueur
-        pygame.draw.circle(surf, (180,140,255), (cx, 110), 45)
-        pygame.draw.circle(surf, (120,80,220),  (cx, 110), 45, 3)
-        fi = pygame.font.Font(None, 70)
+        pygame.draw.circle(surf, (180,140,255), (cx, scale_int(110)), scale_int(45))
+        pygame.draw.circle(surf, (120,80,220),  (cx, scale_int(110)), scale_int(45), 3)
+        fi = pygame.font.Font(None, scale_int(70))
         lt = fi.render("1", True, WHITE)
-        surf.blit(lt, (cx-lt.get_width()//2, 110-lt.get_height()//2))
+        surf.blit(lt, (cx-lt.get_width()//2, scale_int(110)-lt.get_height()//2))
         # Textes
-        fn = pygame.font.Font(None, 42)
+        fn = pygame.font.Font(None, scale_int(42))
         nt = fn.render("SOLO", True, WHITE)
-        surf.blit(nt, (cx-nt.get_width()//2, 172))
-        fd = pygame.font.Font(None, 22)
+        surf.blit(nt, (cx-nt.get_width()//2, scale_int(172)))
+        fd = pygame.font.Font(None, scale_int(22))
         sub = fd.render("Un joueur  -  Clavier + Souris", True, (200,180,255))
-        surf.blit(sub, (cx-sub.get_width()//2, 210))
-        pygame.draw.line(surf, (120,80,200,150), (30,240), (self.CARD_W-30,240), 1)
+        surf.blit(sub, (cx-sub.get_width()//2, scale_int(210)))
+        pygame.draw.line(surf, (120,80,200,150), (scale_int(30),scale_int(240)), (self.CARD_W-scale_int(30),scale_int(240)), 1)
         for i, line in enumerate(["ZQSD : Deplacement",
-                                   "Clic gauche : Tirer",
+                                   "Clic gauche : Attaque",
+                                   "Clic droit : Attaque secondaire",
                                    "ESPACE : Dash",
                                    "F : Competence / E : Portail"]):
             t = fd.render(line, True, (200,200,220))
-            surf.blit(t, (cx-t.get_width()//2, 252+i*20))
-        fk = pygame.font.Font(None, 20)
+            surf.blit(t, (cx-t.get_width()//2, scale_int(252)+i*scale_int(20)))
+        fk = pygame.font.Font(None, scale_int(20))
         k = fk.render("[ 1 ]", True, GOLD)
-        surf.blit(k, (cx-k.get_width()//2, self.CARD_H-28))
+        surf.blit(k, (cx-k.get_width()//2, self.CARD_H-scale_int(28)))
         return surf
 
     def _build_card_online(self):
         surf = self._card_base((10,60,140), (5,20,60), (60,160,255))
         cx   = self.CARD_W // 2
         # Icone reseau (deux cercles + ligne)
-        pygame.draw.circle(surf, (180,100,255), (cx-30, 110), 28)
-        pygame.draw.circle(surf, (60,160,255),  (cx+30, 110), 28)
-        pygame.draw.line(surf, (200,200,255), (cx-2,110), (cx+2,110), 3)
+        pygame.draw.circle(surf, (180,100,255), (cx-scale_int(30), scale_int(110)), scale_int(28))
+        pygame.draw.circle(surf, (60,160,255),  (cx+scale_int(30), scale_int(110)), scale_int(28))
+        pygame.draw.line(surf, (200,200,255), (cx-scale_int(2),scale_int(110)), (cx+scale_int(2),scale_int(110)), 3)
         # Antennes
-        for ox2, col in [(-30,(180,100,255)),(30,(60,160,255))]:
-            pygame.draw.line(surf, col, (cx+ox2,82), (cx+ox2,60), 2)
-            pygame.draw.circle(surf, col, (cx+ox2, 56), 5)
-        fi = pygame.font.Font(None, 40)
+        for ox2, col in [(-scale_int(30),(180,100,255)),(scale_int(30),(60,160,255))]:
+            pygame.draw.line(surf, col, (cx+ox2,scale_int(82)), (cx+ox2,scale_int(60)), 2)
+            pygame.draw.circle(surf, col, (cx+ox2, scale_int(56)), scale_int(5))
+        fi = pygame.font.Font(None, scale_int(40))
         lt1 = fi.render("H", True, WHITE)
         lt2 = fi.render("C", True, WHITE)
-        surf.blit(lt1, (cx-30-lt1.get_width()//2, 110-lt1.get_height()//2))
-        surf.blit(lt2, (cx+30-lt2.get_width()//2, 110-lt2.get_height()//2))
-        fn = pygame.font.Font(None, 42)
+        surf.blit(lt1, (cx-scale_int(30)-lt1.get_width()//2, scale_int(110)-lt1.get_height()//2))
+        surf.blit(lt2, (cx+scale_int(30)-lt2.get_width()//2, scale_int(110)-lt2.get_height()//2))
+        fn = pygame.font.Font(None, scale_int(42))
         nt = fn.render("EN LIGNE", True, WHITE)
-        surf.blit(nt, (cx-nt.get_width()//2, 172))
-        fd = pygame.font.Font(None, 22)
+        surf.blit(nt, (cx-nt.get_width()//2, scale_int(172)))
+        fd = pygame.font.Font(None, scale_int(22))
         sub = fd.render("Co-op 2 joueurs  -  Reseau local ou internet", True, (160,220,255))
-        surf.blit(sub, (cx-sub.get_width()//2, 210))
-        pygame.draw.line(surf, (60,140,200,150), (30,240), (self.CARD_W-30,240), 1)
+        surf.blit(sub, (cx-sub.get_width()//2, scale_int(210)))
+        pygame.draw.line(surf, (60,140,200,150), (scale_int(30),scale_int(240)), (self.CARD_W-scale_int(30),scale_int(240)), 1)
         for i, line in enumerate(["Heberger : vous etes le serveur",
                                    "Rejoindre : entrez l'IP du host",
                                    f"Port UDP {DEFAULT_PORT} (ouvrir le pare-feu)",
                                    "Fonctionne en LAN et sur internet"]):
             t = fd.render(line, True, (200,230,255))
-            surf.blit(t, (cx-t.get_width()//2, 252+i*20))
-        fk = pygame.font.Font(None, 20)
+            surf.blit(t, (cx-t.get_width()//2, scale_int(252)+i*scale_int(20)))
+        fk = pygame.font.Font(None, scale_int(20))
         k = fk.render("[ 2 ]", True, GOLD)
-        surf.blit(k, (cx-k.get_width()//2, self.CARD_H-28))
+        surf.blit(k, (cx-k.get_width()//2, self.CARD_H-scale_int(28)))
         return surf
 
     def _card_y(self):
-        return self.h//2 - self.CARD_H//2 + 30
+        return self.h//2 - self.CARD_H//2 + scale_int(30)
 
     def get_solo_rect(self):
         total = self.CARD_W*2 + self.SPACING
@@ -487,11 +488,11 @@ class ModeSelectRenderer:
         draw_bg_overlay(surface, self.bg, self.w, self.h)
         draw_particles(surface, self._particles, self.w, self.h)
 
-        ty    = int(80 + math.sin(self._timer*0.03)*4)
+        ty    = int(scale_int(80) + math.sin(self._timer*0.03)*scale_int(4))
         title = self.font_xl.render("MOBIUS", True, WHITE)
         sub   = self.font_lg.render("Choisissez votre mode", True, (160,200,255))
         surface.blit(title, (self.w//2-title.get_width()//2, ty))
-        surface.blit(sub,   (self.w//2-sub.get_width()//2,   ty+title.get_height()+6))
+        surface.blit(sub,   (self.w//2-sub.get_width()//2,   ty+title.get_height()+scale_int(6)))
 
         for card, rect in [(self._c_solo, self.get_solo_rect()),
                             (self._c_online, self.get_online_rect())]:
@@ -511,7 +512,7 @@ class ModeSelectRenderer:
                                  (rect.x, draw_y, self.CARD_W, self.CARD_H), 3, border_radius=16)
 
         inst = self.font_sm.render("1=Solo  -  2=En ligne  -  ESC=retour", True, (140,140,160))
-        surface.blit(inst, (self.w//2-inst.get_width()//2, self.h-36))
+        surface.blit(inst, (self.w//2-inst.get_width()//2, self.h-scale_int(36)))
 
 
 # ==============================================================================
@@ -524,15 +525,15 @@ class OnlineMenuRenderer:
       - Heberger  : cree le serveur, affiche l'IP locale a communiquer a P2
       - Rejoindre : passe a l'ecran de saisie d'IP
     """
-    BTN_W, BTN_H = 340, 64
+    BTN_W, BTN_H = scale_int(340), scale_int(64)
 
     def __init__(self, w, h, bg):
         self.w, self.h  = w, h
         self.bg         = bg
-        self.font_xl    = pygame.font.Font(None, 80)
-        self.font_lg    = pygame.font.Font(None, 44)
-        self.font_md    = pygame.font.Font(None, 32)
-        self.font_sm    = pygame.font.Font(None, 22)
+        self.font_xl    = pygame.font.Font(None, scale_int(80))
+        self.font_lg    = pygame.font.Font(None, scale_int(44))
+        self.font_md    = pygame.font.Font(None, scale_int(32))
+        self.font_sm    = pygame.font.Font(None, scale_int(22))
         self._timer     = 0
         self._particles = make_particles(35, w, h)
         # IP locale recuperee une seule fois (appel reseau rapide)
@@ -540,7 +541,7 @@ class OnlineMenuRenderer:
 
     def _btn(self, i):
         return pygame.Rect(self.w//2 - self.BTN_W//2,
-                           self.h//2 + 20 + i*(self.BTN_H+26), self.BTN_W, self.BTN_H)
+                           self.h//2 + scale_int(20) + i*(self.BTN_H+scale_int(26)), self.BTN_W, self.BTN_H)
 
     def get_host_rect(self):  return self._btn(0)
     def get_join_rect(self):  return self._btn(1)
@@ -553,17 +554,17 @@ class OnlineMenuRenderer:
         draw_particles(surface, self._particles, self.w, self.h)
 
         # Titre
-        ty    = int(80 + math.sin(self._timer*0.03)*4)
+        ty    = int(scale_int(80) + math.sin(self._timer*0.03)*scale_int(4))
         title = self.font_xl.render("EN LIGNE", True, (80,200,255))
         sub   = self.font_lg.render("Multijoueur co-op 2 joueurs", True, (160,220,255))
         surface.blit(title, (self.w//2-title.get_width()//2, ty))
-        surface.blit(sub,   (self.w//2-sub.get_width()//2,   ty+title.get_height()+6))
+        surface.blit(sub,   (self.w//2-sub.get_width()//2,   ty+title.get_height()+scale_int(6)))
 
         # IP locale (utile si on heberge)
         ip_txt = self.font_sm.render(
             f"Votre IP locale : {self._local_ip}  (a communiquer a P2 si vous hebergez)",
             True, (140,200,140))
-        surface.blit(ip_txt, (self.w//2-ip_txt.get_width()//2, ty+title.get_height()+sub.get_height()+18))
+        surface.blit(ip_txt, (self.w//2-ip_txt.get_width()//2, ty+title.get_height()+sub.get_height()+scale_int(18)))
 
         # Boutons
         draw_button(surface, self.get_host_rect(), "Heberger la partie",
@@ -580,11 +581,11 @@ class OnlineMenuRenderer:
         note = self.font_sm.render(
             f"Sur internet : ouvrir le port UDP {DEFAULT_PORT} dans le pare-feu et le routeur",
             True, (180,160,80))
-        surface.blit(note, (self.w//2-note.get_width()//2, self.h-42))
+        surface.blit(note, (self.w//2-note.get_width()//2, self.h-scale_int(42)))
         port_note = self.font_sm.render(
             f"Port par defaut : {DEFAULT_PORT}",
             True, (120,120,140))
-        surface.blit(port_note, (self.w//2-port_note.get_width()//2, self.h-22))
+        surface.blit(port_note, (self.w//2-port_note.get_width()//2, self.h-scale_int(22)))
 
 
 # ==============================================================================
@@ -597,16 +598,16 @@ class IPInputRenderer:
     Gere la saisie clavier (chiffres, points, backspace).
     Affiche les erreurs de format.
     """
-    BTN_W, BTN_H = 240, 56
+    BTN_W, BTN_H = scale_int(240), scale_int(56)
 
     def __init__(self, w, h, bg):
         self.w, self.h  = w, h
         self.bg         = bg
-        self.font_xl    = pygame.font.Font(None, 72)
-        self.font_lg    = pygame.font.Font(None, 44)
-        self.font_md    = pygame.font.Font(None, 32)
-        self.font_ip    = pygame.font.Font(None, 52)   # Grande police pour l'IP
-        self.font_sm    = pygame.font.Font(None, 22)
+        self.font_xl    = pygame.font.Font(None, scale_int(72))
+        self.font_lg    = pygame.font.Font(None, scale_int(44))
+        self.font_md    = pygame.font.Font(None, scale_int(32))
+        self.font_ip    = pygame.font.Font(None, scale_int(52))
+        self.font_sm    = pygame.font.Font(None, scale_int(22))
         self._timer     = 0
         self._particles = make_particles(30, w, h)
 
@@ -615,11 +616,11 @@ class IPInputRenderer:
 
     def get_connect_rect(self):
         return pygame.Rect(self.w//2 - self.BTN_W//2,
-                           self.h//2 + 80, self.BTN_W, self.BTN_H)
+                           self.h//2 + scale_int(80), self.BTN_W, self.BTN_H)
 
     def get_back_rect(self):
         return pygame.Rect(self.w//2 - self.BTN_W//2,
-                           self.h//2 + 80 + self.BTN_H + 20, self.BTN_W, self.BTN_H)
+                           self.h//2 + scale_int(80) + self.BTN_H + scale_int(20), self.BTN_W, self.BTN_H)
 
     def handle_keydown(self, event) -> str | None:
         """
@@ -670,15 +671,15 @@ class IPInputRenderer:
         draw_particles(surface, self._particles, self.w, self.h)
 
         # Titre
-        ty = int(80 + math.sin(self._timer*0.03)*4)
+        ty = int(scale_int(80) + math.sin(self._timer*0.03)*scale_int(4))
         title = self.font_xl.render("REJOINDRE", True, (80,200,255))
         sub   = self.font_lg.render("Entrez l'IP du host", True, (160,220,255))
         surface.blit(title, (self.w//2-title.get_width()//2, ty))
-        surface.blit(sub,   (self.w//2-sub.get_width()//2,   ty+title.get_height()+6))
+        surface.blit(sub,   (self.w//2-sub.get_width()//2,   ty+title.get_height()+scale_int(6)))
 
         # Champ de saisie IP
-        FIELD_W, FIELD_H = 420, 60
-        field_rect = pygame.Rect(self.w//2 - FIELD_W//2, self.h//2 - FIELD_H//2 - 20,
+        FIELD_W, FIELD_H = scale_int(420), scale_int(60)
+        field_rect = pygame.Rect(self.w//2 - FIELD_W//2, self.h//2 - FIELD_H//2 - scale_int(20),
                                  FIELD_W, FIELD_H)
         # Fond du champ
         pygame.draw.rect(surface, (20,30,60), field_rect, border_radius=10)
@@ -697,7 +698,7 @@ class IPInputRenderer:
         # Message d'erreur
         if self.error_msg:
             err = self.font_sm.render(self.error_msg, True, (220,80,80))
-            surface.blit(err, (self.w//2-err.get_width()//2, field_rect.bottom+8))
+            surface.blit(err, (self.w//2-err.get_width()//2, field_rect.bottom+scale_int(8)))
 
         # Boutons
         draw_button(surface, self.get_connect_rect(), "Connexion",
@@ -711,7 +712,7 @@ class IPInputRenderer:
         note = self.font_sm.render(
             "Tapez l'adresse IP du host - Entree pour valider - ESC pour annuler",
             True, (120,140,160))
-        surface.blit(note, (self.w//2-note.get_width()//2, self.h-36))
+        surface.blit(note, (self.w//2-note.get_width()//2, self.h-scale_int(36)))
 
 
 # ==============================================================================
@@ -726,19 +727,19 @@ class WaitingRenderer:
     Affiche un spinner anime + l'IP concernee.
     Bouton Annuler pour interrompre.
     """
-    BTN_W, BTN_H = 200, 50
+    BTN_W, BTN_H = scale_int(200), scale_int(50)
 
     def __init__(self, w, h, bg):
         self.w, self.h = w, h
         self.bg        = bg
-        self.font_xl   = pygame.font.Font(None, 66)
-        self.font_md   = pygame.font.Font(None, 30)
-        self.font_sm   = pygame.font.Font(None, 22)
+        self.font_xl   = pygame.font.Font(None, scale_int(66))
+        self.font_md   = pygame.font.Font(None, scale_int(30))
+        self.font_sm   = pygame.font.Font(None, scale_int(22))
         self._timer    = 0
 
     def get_cancel_rect(self, info_count=3):
         info_count = max(1, info_count)
-        y = self.h//2 + 110 + info_count * 34
+        y = self.h//2 + scale_int(110) + info_count * scale_int(34)
         return pygame.Rect(self.w//2-self.BTN_W//2, y, self.BTN_W, self.BTN_H)
 
     def draw(self, surface, title_text: str, info_lines: list[str]):
@@ -751,23 +752,23 @@ class WaitingRenderer:
         draw_bg_overlay(surface, self.bg, self.w, self.h, alpha=190)
 
         # Spinner anime (arc tournant)
-        cx, cy = self.w//2, self.h//2 - 20
+        cx, cy = self.w//2, self.h//2 - scale_int(20)
         angle  = self._timer * 6   # Tourne de 6 deg par frame
         pygame.draw.arc(surface, (80, 160, 255),
-                        (cx-40, cy-40, 80, 80),
-                        math.radians(angle), math.radians(angle+270), 5)
+                        (cx-scale_int(40), cy-scale_int(40), scale_int(80), scale_int(80)),
+                        math.radians(angle), math.radians(angle+270), scale_int(5))
         pygame.draw.arc(surface, (40, 80, 130),
-                        (cx-40, cy-40, 80, 80),
-                        math.radians(angle+270), math.radians(angle+360), 5)
+                        (cx-scale_int(40), cy-scale_int(40), scale_int(80), scale_int(80)),
+                        math.radians(angle+270), math.radians(angle+360), scale_int(5))
 
         # Titre
         title = self.font_xl.render(title_text, True, WHITE)
-        surface.blit(title, (self.w//2-title.get_width()//2, cy-130))
+        surface.blit(title, (self.w//2-title.get_width()//2, cy-scale_int(130)))
 
         # Lignes d'info
         for i, line in enumerate(info_lines):
             t = self.font_md.render(line, True, (180,220,255))
-            surface.blit(t, (self.w//2-t.get_width()//2, cy+60+i*30))
+            surface.blit(t, (self.w//2-t.get_width()//2, cy+scale_int(60)+i*scale_int(30)))
 
         # Bouton Annuler
         cancel_rect = self.get_cancel_rect(len(info_lines))
@@ -786,15 +787,15 @@ class MenuRenderer:
     Identique a l'original - pas de selection double ici
     (chaque PC choisit sa propre classe dans le menu multijoueur).
     """
-    CARD_W, CARD_H = 210, 280
+    CARD_W, CARD_H = scale_int(210), scale_int(280)
 
     def __init__(self, w, h, bg):
         self.w, self.h  = w, h
         self.bg         = bg
-        self.font_xl    = pygame.font.Font(None, 80)
-        self.font_lg    = pygame.font.Font(None, 44)
-        self.font_md    = pygame.font.Font(None, 28)
-        self.font_sm    = pygame.font.Font(None, 22)
+        self.font_xl    = pygame.font.Font(None, scale_int(80))
+        self.font_lg    = pygame.font.Font(None, scale_int(44))
+        self.font_md    = pygame.font.Font(None, scale_int(28))
+        self.font_sm    = pygame.font.Font(None, scale_int(22))
         self._timer     = 0
         self._particles = make_particles(40, w, h)
         self._card_surfs= {k: self._build_card(k, s) for k, s in SKILLS.items()}
@@ -812,19 +813,19 @@ class MenuRenderer:
             pygame.draw.line(surf, (max(0,min(255,r)),max(0,min(255,g)),max(0,min(255,b)),200),
                              (0,y),(w,y))
         pygame.draw.rect(surf, (*icon_col[:3],200), surf.get_rect(), 2, border_radius=12)
-        cx, cy_i = w//2, 85
-        pygame.draw.circle(surf, (*icon_col[:3],80),  (cx,cy_i), 42)
-        pygame.draw.circle(surf, (*icon_col[:3],220), (cx,cy_i), 38, 3)
-        fi = pygame.font.Font(None, 58)
+        cx, cy_i = w//2, scale_int(85)
+        pygame.draw.circle(surf, (*icon_col[:3],80),  (cx,cy_i), scale_int(42))
+        pygame.draw.circle(surf, (*icon_col[:3],220), (cx,cy_i), scale_int(38), 3)
+        fi = pygame.font.Font(None, scale_int(58))
         lt = fi.render(skill["name"][0], True, WHITE)
         surf.blit(lt, (cx-lt.get_width()//2, cy_i-lt.get_height()//2))
-        fn = pygame.font.Font(None, 30)
+        fn = pygame.font.Font(None, scale_int(30))
         nt = fn.render(skill["name"], True, WHITE)
-        surf.blit(nt, (cx-nt.get_width()//2, 145))
-        fd = pygame.font.Font(None, 20)
+        surf.blit(nt, (cx-nt.get_width()//2, scale_int(145)))
+        fd = pygame.font.Font(None, scale_int(20))
         dt = fd.render(skill["desc"], True, (200,200,200))
-        surf.blit(dt, (cx-dt.get_width()//2, 172))
-        pygame.draw.line(surf, (*icon_col[:3],120), (20,196), (w-20,196), 1)
+        surf.blit(dt, (cx-dt.get_width()//2, scale_int(172)))
+        pygame.draw.line(surf, (*icon_col[:3],120), (scale_int(20),scale_int(196)), (w-scale_int(20),scale_int(196)), 1)
         words = skill["special"].split()
         lines, line = [], ""
         for word in words:
@@ -836,22 +837,22 @@ class MenuRenderer:
         if line: lines.append(line)
         for i, l in enumerate(lines):
             lt2 = fd.render(l, True, icon_col)
-            surf.blit(lt2, (cx-lt2.get_width()//2, 204+i*18))
+            surf.blit(lt2, (cx-lt2.get_width()//2, scale_int(204)+i*scale_int(18)))
         idx = list(SKILLS.keys()).index(key) if key in SKILLS else 0
-        fn2 = pygame.font.Font(None, 22)
+        fn2 = pygame.font.Font(None, scale_int(22))
         num = fn2.render(f"[ {idx+1} ]", True, GOLD)
-        surf.blit(num, (cx-num.get_width()//2, h-28))
+        surf.blit(num, (cx-num.get_width()//2, h-scale_int(28)))
         return surf
 
     def get_card_rects(self) -> dict:
         keys    = list(SKILLS.keys())
         # Espacement entre les cartes augmente (24 -> 44) pour aerer le menu.
         # Le calcul centre automatiquement l'ensemble sur la largeur de l'ecran.
-        spacing = 44
+        spacing = scale_int(44)
         total_w = len(keys)*self.CARD_W + (len(keys)-1)*spacing
         sx      = (self.w - total_w) // 2
         # Legerement plus bas (+40 -> +60) pour laisser respirer le titre
-        y       = self.h//2 - self.CARD_H//2 + 60
+        y       = self.h//2 - self.CARD_H//2 + scale_int(60)
         return {k: pygame.Rect(sx+i*(self.CARD_W+spacing), y, self.CARD_W, self.CARD_H)
                 for i, k in enumerate(keys)}
 
@@ -865,30 +866,30 @@ class MenuRenderer:
         draw_bg_overlay(surface, self.bg, self.w, self.h, alpha=160)
         draw_particles(surface, self._particles, self.w, self.h)
 
-        title_y = int(90 + math.sin(self._timer*0.03)*4)
+        title_y = int(scale_int(90) + math.sin(self._timer*0.03)*scale_int(4))
         title   = self.font_xl.render("MOBIUS", True, WHITE)
         sub     = self.font_lg.render("R O G U E L I K E", True, (160,200,255))
         surface.blit(title, (self.w//2-title.get_width()//2, title_y))
-        surface.blit(sub,   (self.w//2-sub.get_width()//2,   title_y+title.get_height()+6))
+        surface.blit(sub,   (self.w//2-sub.get_width()//2,   title_y+title.get_height()+scale_int(6)))
 
         if mode_label:
             lbl = self.font_md.render(mode_label, True, (120,200,255))
-            bg_lbl = pygame.Surface((lbl.get_width()+30, lbl.get_height()+12), pygame.SRCALPHA)
+            bg_lbl = pygame.Surface((lbl.get_width()+scale_int(30), lbl.get_height()+scale_int(12)), pygame.SRCALPHA)
             bg_lbl.fill((20,60,120,180))
             pygame.draw.rect(bg_lbl, (80,160,255), bg_lbl.get_rect(), 2, border_radius=8)
-            lbl_y = title_y+title.get_height()+sub.get_height()+22
-            surface.blit(bg_lbl, (self.w//2-bg_lbl.get_width()//2, lbl_y-6))
+            lbl_y = title_y+title.get_height()+sub.get_height()+scale_int(22)
+            surface.blit(bg_lbl, (self.w//2-bg_lbl.get_width()//2, lbl_y-scale_int(6)))
             surface.blit(lbl,    (self.w//2-lbl.get_width()//2,     lbl_y))
         else:
             choose = self.font_md.render("Choisissez votre classe", True, (180,180,200))
             surface.blit(choose, (self.w//2-choose.get_width()//2,
-                                   title_y+title.get_height()+sub.get_height()+22))
+                                   title_y+title.get_height()+sub.get_height()+scale_int(22)))
 
         rects = self.get_card_rects()
         for key, rect in rects.items():
             is_hover = rect.collidepoint(mouse)
             is_sel   = key == selected_skill
-            dy       = -8 if (is_hover or is_sel) else 0
+            dy       = -scale_int(8) if (is_hover or is_sel) else 0
             draw_y   = rect.y + dy
             sh = pygame.Surface((self.CARD_W+10, self.CARD_H+10), pygame.SRCALPHA)
             sh.fill((0,0,0,80))
@@ -906,7 +907,7 @@ class MenuRenderer:
 
         inst = self.font_sm.render(
             "Cliquez ou appuyez sur 1-5  --  ESC = retour", True, (140,140,160))
-        surface.blit(inst, (self.w//2-inst.get_width()//2, self.h-36))
+        surface.blit(inst, (self.w//2-inst.get_width()//2, self.h-scale_int(36)))
 
 
 # ==============================================================================
@@ -919,14 +920,14 @@ class GameOverRenderer:
     def __init__(self, w, h, bg):
         self.w, self.h = w, h
         self.bg        = bg
-        self.font_xl   = pygame.font.Font(None, 90)
-        self.font_md   = pygame.font.Font(None, 32)
+        self.font_xl   = pygame.font.Font(None, scale_int(90))
+        self.font_md   = pygame.font.Font(None, scale_int(32))
         self._timer    = 0
         self.victory_art = load_optional_scaled_image(
-            ("ui", "game_over", "victory.png"), size=(560, 390)
+            ("ui", "game_over", "victory.png"), size=scale_tuple((560, 390))
         )
         self.defeat_art = load_optional_scaled_image(
-            ("ui", "game_over", "defeat.png"), size=(560, 390)
+            ("ui", "game_over", "defeat.png"), size=scale_tuple((560, 390))
         )
 
     def draw(self, surface, player, epoch_key, victory=False, replay_status=None, online=False):
@@ -1125,7 +1126,7 @@ class Game:
         self._local_ip_cache: str = get_local_ip()   # calcule une seule fois
         self._host_replay_vote = False
         self._client_replay_vote = False
-        self._client_prev_buttons = {"dash": False, "skill": False, "fire": False, "chest": False}
+        self._client_prev_buttons = {"dash": False, "skill": False, "fire": False, "alt_fire": False, "chest": False}
         self._last_client_sfx_frame = -1
 
         # -- Salles -------------------------------------------------------------
@@ -1154,7 +1155,7 @@ class Game:
         self.current_room  = self.rooms["prehistoire"]
         self._host_replay_vote = False
         self._client_replay_vote = False
-        self._client_prev_buttons = {"dash": False, "skill": False, "fire": False, "chest": False}
+        self._client_prev_buttons = {"dash": False, "skill": False, "fire": False, "alt_fire": False, "chest": False}
         self._last_client_sfx_frame = -1
 
         if self.net_mode == "solo":
@@ -1227,7 +1228,7 @@ class Game:
         self._client_replay_vote = False
         self._pending_ip = ""
         self._conn_deadline = 0.0
-        self._client_prev_buttons = {"dash": False, "skill": False, "fire": False, "chest": False}
+        self._client_prev_buttons = {"dash": False, "skill": False, "fire": False, "alt_fire": False, "chest": False}
         self._last_client_sfx_frame = -1
 
     def _update_music(self):
@@ -1508,17 +1509,20 @@ class Game:
         dash_pressed = bool(keys[pygame.K_SPACE])
         skill_pressed = bool(keys[pygame.K_f])
         fire_pressed = bool(mouse[0])
+        alt_fire_pressed = bool(mouse[2])
         chest_pressed = bool(keys[pygame.K_e])
 
         dash_edge = dash_pressed and not self._client_prev_buttons["dash"]
         skill_edge = skill_pressed and not self._client_prev_buttons["skill"]
         fire_edge = fire_pressed and not self._client_prev_buttons["fire"]
+        alt_fire_edge = alt_fire_pressed and not self._client_prev_buttons["alt_fire"]
         chest_edge = chest_pressed and not self._client_prev_buttons["chest"]
 
         self._client_prev_buttons = {
             "dash": dash_pressed,
             "skill": skill_pressed,
             "fire": fire_pressed,
+            "alt_fire": alt_fire_pressed,
             "chest": chest_pressed,
         }
 
@@ -1536,6 +1540,7 @@ class Game:
             "dash":      dash_edge,
             "skill":     skill_edge,
             "fire":      fire_edge,
+            "alt_fire":  alt_fire_edge,
             "fire_tx":   mx,
             "fire_ty":   my,
             "chest":     chest_edge,
