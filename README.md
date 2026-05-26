@@ -37,6 +37,15 @@ pip install pygame
 py mobius/main.py
 ```
 
+### Desinstallation
+
+Si vous voulez supprimer completement le jeu et le dossier du projet :
+
+- sous Linux/macOS : `./desinstaller.sh`
+- sous Windows : `desinstaller.bat`
+
+Les scripts demandent une confirmation explicite avant de supprimer le dossier.
+
 ## Mode de jeu
 
 Au lancement, le menu principal permet de :
