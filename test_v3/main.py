@@ -1120,7 +1120,7 @@ class Game:
         bg_renderer  = BackgroundRenderer(sw, sh)
         self.menu_bg = bg_renderer.get("futuristique")
         menu_bg = load_optional_scaled_image(
-            ("backgrounds", "decor_dj_1.jpg"), size=(sw, sh), alpha=False
+            ("ui", "fond_d-ecran.png"), size=(sw, sh), alpha=False
         )
         if menu_bg:
             self.menu_bg = menu_bg
@@ -1677,7 +1677,8 @@ class Game:
             self._close_network()
             self.game_state = ONLINE_MENU
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            if self.waiting_r.get_cancel_rect().collidepoint(*event.pos):
+            info_count = 4
+            if self.waiting_r.get_cancel_rect(info_count).collidepoint(*event.pos):
                 self._close_network()
                 self.game_state = ONLINE_MENU
         return running
@@ -1688,7 +1689,8 @@ class Game:
             self._close_network()
             self.game_state = ONLINE_MENU
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            if self.waiting_r.get_cancel_rect().collidepoint(*event.pos):
+            info_count = 2
+            if self.waiting_r.get_cancel_rect(info_count).collidepoint(*event.pos):
                 self._close_network()
                 self.game_state = ONLINE_MENU
         return running
