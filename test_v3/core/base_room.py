@@ -338,6 +338,7 @@ class Player(pygame.sprite.Sprite):
         if self.skill_cooldown > 0 or not self.skill: return False
         if self.skill == "tank":
             self.skill_active=True; self.skill_duration=300; self.skill_cooldown=1800
+            if self._sound_callback: self._sound_callback("pouvoir_tank")
         elif self.skill == "berserker":
             self.damage_boost=2.0; self.boost_timer=300; self.skill_cooldown=1200
             if self._sound_callback: self._sound_callback("berserker_power")

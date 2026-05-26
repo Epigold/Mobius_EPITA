@@ -17,6 +17,9 @@ from .constants import *
 
 EPOCH_BACKGROUND_ASSETS = {
     "prehistoire": ("backgrounds", "decor_dj_1.jpg"),
+    "grece": ("backgrounds", "decor_dj_2.jpg"),
+    "edo": ("backgrounds", "decor_dj_3.jpg"),
+    "futuristique": ("backgrounds", "decor_dj_6.jpg"),
 }
 
 

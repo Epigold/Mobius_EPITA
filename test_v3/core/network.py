@@ -960,6 +960,7 @@ class ClientRenderer:
         angle = int(pdata.get('a', 0))
 
         if not enemy and pdata.get('w'):
+            from .mechanics import Weapon
             weapon_key = pdata['w']
             cache_key = ('player', weapon_key)
             img = self._projectile_cache.get(cache_key)
