@@ -243,7 +243,7 @@ class PowerUp(pygame.sprite.Sprite):
 # ==============================================================================
 
 class Chest(pygame.sprite.Sprite):
-    W, H = 92, 92
+    W, H = 160, 160
     _portal_frames = None
     _portal_open_frames = None
 
@@ -256,11 +256,7 @@ class Chest(pygame.sprite.Sprite):
             cols=8, rows=1, size=(cls.W, cls.H), alpha=True, trim=True
         )[0]
         cls._portal_frames = frames
-        cls._portal_open_frames = []
-        for frame in frames:
-            glow = frame.copy()
-            glow.fill((140, 255, 200, 70), special_flags=pygame.BLEND_RGBA_ADD)
-            cls._portal_open_frames.append(glow)
+        cls._portal_open_frames = list(frames)
 
     def __init__(self, x, y, weapon_inside="bone"):
         super().__init__()

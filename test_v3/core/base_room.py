@@ -63,6 +63,8 @@ class Player(pygame.sprite.Sprite):
         self.skill_cooldown = 0; self.skill_active = False; self.skill_duration = 0
 
         # -- Boosts power-up ---------------------------------------------------
+        self.skill_damage_boost = 1.0; self.skill_speed_boost = 1.0
+        self.powerup_damage_boost = 1.0; self.powerup_speed_boost = 1.0
         self.damage_boost = 1.0; self.speed_boost = 1.0; self.boost_timer = 0
 
         # -- Armes -------------------------------------------------------------
@@ -102,6 +104,7 @@ class Player(pygame.sprite.Sprite):
         # -- KO / reanimation ------------------------------------------------
         self.is_downed = False
         self.revive_progress = 0
+        self.render_alpha = 255
 
     # -- Sprites ---------------------------------------------------------------
     def _load_sprites(self):
@@ -265,15 +268,30 @@ class Player(pygame.sprite.Sprite):
         if self.stamina < self.max_stamina:
             self.stamina = min(self.stamina + self.stamina_regen, self.max_stamina)
 
+    def _refresh_boosts(self):
+        self.damage_boost = self.skill_damage_boost * self.powerup_damage_boost
+        self.speed_boost = self.skill_speed_boost * self.powerup_speed_boost
+
+    def _deactivate_skill_effect(self):
+        self.skill_active = False
+        self.skill_duration = 0
+        self.skill_damage_boost = 1.0
+        self.skill_speed_boost = 1.0
+        self._refresh_boosts()
+
     def _update_timers(self):
         if self.dash_cooldown > 0: self.dash_cooldown -= 1
         if self.skill_cooldown > 0: self.skill_cooldown -= 1
         if self.skill_duration > 0:
             self.skill_duration -= 1
-            if self.skill_duration == 0: self.skill_active = False
+            if self.skill_duration == 0:
+                self._deactivate_skill_effect()
         if self.boost_timer > 0:
             self.boost_timer -= 1
-            if self.boost_timer == 0: self.damage_boost = self.speed_boost = 1.0
+            if self.boost_timer == 0:
+                self.powerup_damage_boost = 1.0
+                self.powerup_speed_boost = 1.0
+                self._refresh_boosts()
 
     def _update_anim(self):
         if self.is_downed:
@@ -336,11 +354,13 @@ class Player(pygame.sprite.Sprite):
         if self.is_downed:
             return False
         if self.skill_cooldown > 0 or not self.skill: return False
+        self._deactivate_skill_effect()
         if self.skill == "tank":
             self.skill_active=True; self.skill_duration=300; self.skill_cooldown=1800
             if self._sound_callback: self._sound_callback("pouvoir_tank")
         elif self.skill == "berserker":
-            self.damage_boost=2.0; self.boost_timer=300; self.skill_cooldown=1200
+            self.skill_active=True; self.skill_duration=300; self.skill_cooldown=1200
+            self.skill_damage_boost=2.0; self._refresh_boosts()
             if self._sound_callback: self._sound_callback("berserker_power")
         elif self.skill == "vampire":
             self.skill_active=True; self.skill_duration=600; self.skill_cooldown=900
@@ -389,8 +409,7 @@ class Player(pygame.sprite.Sprite):
         self.is_downed = True
         self.revive_progress = 0
         self.dashing = False
-        self.skill_active = False
-        self.skill_duration = 0
+        self._deactivate_skill_effect()
         self._update_downed_state()
 
     def revive(self):
@@ -407,8 +426,10 @@ class Player(pygame.sprite.Sprite):
             self.health = min(self.health+10, self.max_health)
 
     def apply_powerup(self, ptype):
-        if ptype=="damage":  self.damage_boost=1.5; self.boost_timer=600
-        elif ptype=="speed": self.speed_boost=1.5;  self.boost_timer=600
+        if ptype=="damage":
+            self.powerup_damage_boost=1.5; self.boost_timer=600; self._refresh_boosts()
+        elif ptype=="speed":
+            self.powerup_speed_boost=1.5;  self.boost_timer=600; self._refresh_boosts()
         elif ptype=="health": self.health=min(self.health+30, self.max_health)
         elif ptype=="stamina": self.max_stamina+=10; self.stamina=self.max_stamina
 
@@ -824,6 +845,7 @@ class BaseRoom:
         player.max_health=stats.get("max_health",player.max_health)
         player.stamina=stats.get("stamina",player.max_stamina)
         player.max_stamina=stats.get("max_stamina",player.max_stamina)
+        player.render_alpha = 255
         player._sound_callback = self._emit_sound
 
     def on_enter(self): pass
@@ -966,6 +988,7 @@ class BaseRoom:
                     'an':p._anim_state,'sk':p.skill,
                     'w':p.current_weapon.key,'i':list(p.inventory),
                     'dn':1 if p.is_downed else 0,'rv':p.revive_progress,
+                    'ra':int(getattr(p, 'render_alpha', 255)),
                     'sc':int(p.skill_cooldown),'sa':1 if p.skill_active else 0,
                     'db':round(p.damage_boost,2),'sb':round(p.speed_boost,2),
                     'bt':int(p.boost_timer),
@@ -1036,6 +1059,9 @@ class BaseRoom:
         self._network_game_over=False
         self._network_next_epoch=None
         self.objective_hint=""
+        self.player.render_alpha = 255
+        if self.player2:
+            self.player2.render_alpha = 255
         p1_downed=self.player.is_downed
         p2_downed=(self.player2 is None) or self.player2.is_downed
         if (self.mode != "server" and p1_downed) or (self.mode == "server" and p1_downed and p2_downed):
@@ -1188,16 +1214,27 @@ class BaseRoom:
                         self.next_wave_timer = 0
                     self.objective_hint = "Passage temporel imminent..."
                     self.next_wave_timer += 1
+                    fade_ratio = min(1.0, self.next_wave_timer / 90.0)
+                    fade_alpha = max(0, int(255 * (1.0 - fade_ratio)))
+                    self.player.render_alpha = fade_alpha
+                    if self.player2:
+                        self.player2.render_alpha = fade_alpha
                     if self.next_wave_timer >= 90:
                         next_epoch=EPOCHS.get(self.epoch_key,{}).get("next",None)
                         self._network_next_epoch=next_epoch
                         return f"NEXT_EPOCH:{next_epoch}" if next_epoch else "NEXT_EPOCH:None"
                 else:
                     self.next_wave_timer = 0
-                    self.objective_hint = "E : Ouvrir le coffre" if players_near else "Approchez-vous du coffre de fin d'epoque"
+                    self.player.render_alpha = 255
+                    if self.player2:
+                        self.player2.render_alpha = 255
+                    self.objective_hint = "E : Activer le portail" if players_near else "Approchez-vous du portail de fin d'epoque"
             else:
                 self.next_wave_timer+=1
                 self.show_chest_hint=False
+                self.player.render_alpha = 255
+                if self.player2:
+                    self.player2.render_alpha = 255
                 if self.next_wave_timer>=160:
                     self._start_new_wave()
         return None
@@ -1232,7 +1269,7 @@ class BaseRoom:
         self.draw_epoch_decoration(surface)
         if self.show_chest_hint:
             font=pygame.font.Font(None,32)
-            hint_text = self.objective_hint or "E : Ouvrir le coffre"
+            hint_text = self.objective_hint or "E : Activer le portail"
             hint=font.render(hint_text,True,GOLD)
             hr=hint.get_rect(center=(SCREEN_WIDTH//2,SCREEN_HEIGHT-80))
             bg_s=pygame.Surface((hr.w+20,hr.h+10),pygame.SRCALPHA); bg_s.fill((0,0,0,160))
@@ -1260,10 +1297,14 @@ class BaseRoom:
 
     def _draw_player(self, surface, player, ox, oy, tint=None):
         pr = player.rect.move(ox, oy)
+        alpha = int(getattr(player, "render_alpha", 255))
+        if alpha <= 0:
+            return pr
         shadow_w = max(26, int(player.rect.width * (0.48 if player._moving else 0.42)))
         shadow_h = 13 if player._moving else 11
         shadow = pygame.Surface((shadow_w * 2, shadow_h * 2), pygame.SRCALPHA)
-        pygame.draw.ellipse(shadow, (0, 0, 0, 85), shadow.get_rect())
+        shadow_alpha = max(0, min(85, int(85 * alpha / 255)))
+        pygame.draw.ellipse(shadow, (0, 0, 0, shadow_alpha), shadow.get_rect())
         surface.blit(shadow, (pr.centerx - shadow.get_width() // 2, pr.bottom - shadow_h))
 
         img = player.image.copy()
@@ -1271,9 +1312,10 @@ class BaseRoom:
             img = tint_surface(img, tint[:3], alpha=tint[3] if len(tint) > 3 else 180)
         if abs(player._visual_tilt) > 0.15 and not player.is_downed:
             img = pygame.transform.rotate(img, player._visual_tilt)
+        img.set_alpha(alpha)
         draw_rect = img.get_rect(center=(pr.centerx, pr.centery + int(player._visual_bob)))
         surface.blit(img, draw_rect)
-        if not player.is_downed:
+        if not player.is_downed and alpha >= 220:
             draw_weapon_in_hand(
                 surface,
                 draw_rect,

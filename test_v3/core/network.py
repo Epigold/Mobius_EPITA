@@ -654,6 +654,7 @@ class ClientRenderer:
             'inventory': list(pdata.get('i', ['rock'])),
             'is_downed': bool(pdata.get('dn', 0)),
             'revive_progress': int(pdata.get('rv', 0)),
+            'render_alpha': int(pdata.get('ra', 255)),
             'skill_cooldown': int(pdata.get('sc', 0)),
             'skill_active': bool(pdata.get('sa', 0)),
             'damage_boost': float(pdata.get('db', 1.0)),
@@ -737,7 +738,7 @@ class ClientRenderer:
           9. HUD P2 (nos propres stats en premier)
           10. HUD P1 (stats de P1)
           11. Infos de vague
-          12. Hint coffre
+          12. Hint portail
         """
         state = self._normalize_state(state)
         epoch = state.get('epoch', 'prehistoire')
@@ -818,10 +819,10 @@ class ClientRenderer:
         if p1:
             self._draw_p1_hud_small(surface, p1)
 
-        # -- 11. Hint coffre ---------------------------------------------------
+        # -- 11. Hint portail ---------------------------------------------------
         if state.get('show_chest_hint'):
             font = pygame.font.Font(None, 32)
-            hint = font.render(state.get('objective_hint', "E : Ouvrir le coffre"), True, GOLD)
+            hint = font.render(state.get('objective_hint', "E : Activer le portail"), True, GOLD)
             hr = hint.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 80))
             bg_s = pygame.Surface((hr.w+20, hr.h+10), pygame.SRCALPHA)
             bg_s.fill((0,0,0,160))
@@ -830,7 +831,7 @@ class ClientRenderer:
 
         # -- 12. Rappel des touches P2 ------------------------------------------
         key_hint = self._font_sm.render(
-            "ZQSD:Move  -  Clic:Tir  -  ESPACE:Dash  -  F:Skill  -  E:Rea/Coffre  -  1..9:Arme",
+            "ZQSD:Move  -  Clic:Tir  -  ESPACE:Dash  -  F:Skill  -  E:Rea/Portail  -  1..9:Arme",
             True, (150, 200, 255))
         surface.blit(key_hint, (10, self.h - 22))
 
@@ -838,6 +839,9 @@ class ClientRenderer:
         """Dessine un joueur a partir de ses donnees serialisees."""
         x, y  = pdata['x'], pdata['y']
         state = pdata.get('anim_state', 'idle')
+        alpha = int(pdata.get('render_alpha', 255))
+        if alpha <= 0:
+            return
         img   = self._player_sprites.get(state, self._player_sprites['idle']).copy()
 
         # Flip horizontal selon la direction regardee
@@ -847,10 +851,11 @@ class ClientRenderer:
         # Teinte coloree pour distinguer l'autre joueur si demande
         if tint is not None:
             img = tint_surface(img, tint[:3], alpha=tint[3] if len(tint) > 3 else 180)
+        img.set_alpha(alpha)
         draw_rect = img.get_rect(center=(x, y))
         surface.blit(img, draw_rect)
         weapon_key = pdata.get('weapon')
-        if weapon_key and not pdata.get('is_downed'):
+        if weapon_key and not pdata.get('is_downed') and alpha >= 220:
             from .mechanics import Weapon
             weapon = Weapon(weapon_key)
             aim_x = int(pdata.get('aim_x', x + (100 if pdata.get('facing_right', True) else -100)))

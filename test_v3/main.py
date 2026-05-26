@@ -13,7 +13,7 @@ FLUX DU JEU (etats)
                                `-- Rejoindre -> IP_INPUT       -> CONNECTING       -> PLAYING (client)
 
 CONTROLES
-  P1 (host) : ZQSD  -  Clic gauche  -  ESPACE (dash)  -  F (skill)  -  E (coffre)  -  1/2 (arme)
+  P1 (host) : ZQSD  -  Clic gauche  -  ESPACE (dash)  -  F (skill)  -  E (portail)  -  1/2 (arme)
   P2 (client) : MEMES touches que P1 (chacun joue sur son propre PC)
 
 RESEAU (voir core/network.py pour les details)
@@ -425,7 +425,7 @@ class ModeSelectRenderer:
         for i, line in enumerate(["ZQSD : Deplacement",
                                    "Clic gauche : Tirer",
                                    "ESPACE : Dash",
-                                   "F : Competence / E : Coffre"]):
+                                   "F : Competence / E : Portail"]):
             t = fd.render(line, True, (200,200,220))
             surf.blit(t, (cx-t.get_width()//2, 252+i*20))
         fk = pygame.font.Font(None, 20)
